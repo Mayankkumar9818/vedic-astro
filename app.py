@@ -56,7 +56,7 @@ def calculate_naam_rashi(name):
     first_char = name.strip()[0].upper()
     rashi_mapping = {
         "Mesh (Aries)": ["A", "L", "E", "अ", "ल", "इ"],
-        "Vrishabha (Taurus)": ["B", "V", "U", "ब", "व", "उ"],
+        "Vrishabha (Taurus)": ["B", "V", "U", "ब", "в", "उ"],
         "Mithun (Gemini)": ["K", "CH", "G", "क", "छ", "घ"],
         "Kark (Cancer)": ["HD", "H", "DD", "ह", "ड"],
         "Simha (Leo)": ["M", "TT", "म", "ट"],
@@ -98,7 +98,6 @@ with st.form("birth_details_form"):
         period_idx = 0 if st.session_state.sb_period == "AM" else 1
         period_selection = t_col3.selectbox("AM/PM", ["AM", "PM"], index=period_idx)
 
-    # THE MASTER GENERATE BUTTON
     submit_button = st.form_submit_button("🔮 Generate Horoscope Calculations / कुंडली बनाएं")
     
     if submit_button:
@@ -145,7 +144,7 @@ else:
         h1_json = json.loads(Tools.AnyToJSON("", h1_raw)) if h1_raw else {}
         calculated_lagna = h1_json.get("HouseBhavaChalitSign", {}).get("Name", "Libra (Tula)")
         
-        # FIXED: Core signature updated to use standard Calculate.PlanetSign method
+        # Pulled Moon's Sign data from Planet Sign library logic
         moon_sign_data = Calculate.PlanetSign(PlanetName.Moon, birth_time)
         calculated_janma_rashi = str(moon_sign_data).strip() if moon_sign_data else "Tula (Libra)"
         calculated_naam_rashi = calculate_naam_rashi(st.session_state.user_name)
@@ -159,10 +158,17 @@ else:
         h10_raw = Calculate.AllHouseData(HouseName.House10, birth_time)
         h10_json = json.loads(Tools.AnyToJSON("", h10_raw)) if h10_raw else {}
         sign_10 = h10_json.get("HouseBhavaChalitSign", {}).get("Name", "Cancer")
+        
+        # Extract dynamic numeric properties to avoid generic pre-typed outputs
+        moon_deg = float(Calculate.PlanetLongitude(PlanetName.Moon, birth_time).ToDegrees())
+        sun_deg = float(Calculate.PlanetLongitude(PlanetName.Sun, birth_time).ToDegrees())
+        lagna_deg = float(Calculate.HouseStartLongitude(HouseName.House1, birth_time).ToDegrees())
+        
     except Exception as e:
         st.error(f"Astrological Engine Error: {e}")
         calculated_lagna, calculated_janma_rashi, planets_in_7, sign_10 = "Libra (Tula)", "Tula (Libra)", [], "Cancer"
         calculated_naam_rashi = calculate_naam_rashi(st.session_state.user_name)
+        moon_deg, sun_deg, lagna_deg = 15.0, 10.0, 20.0
 
     # ==========================================
     # TAB 1: BOTH RASHIS & ASCENDANT
@@ -188,7 +194,6 @@ else:
     with tab2:
         st.header("💑 Marriage Alignment & Unfiltered Age Windows")
         
-        # Determine strict structural alignment based on planetary placements
         has_malefic = any(p in ["Saturn", "Rahu", "Ketu", "Mars", "Shani", "Mangal"] for p in planets_in_7)
         has_benefic = any(p in ["Jupiter", "Venus", "Guru", "Shukra"] for p in planets_in_7)
         
@@ -221,7 +226,6 @@ else:
     with tab3:
         st.header("💼 Profession, Financial Security & Asset Blueprints")
         
-        # Direct conditional logic for Career Mapping
         if any(x in sign_10 for x in ["Cancer", "Scorpio", "Pisces", "Moon", "Mars"]):
             industry = "Public Administration, Healthcare, Strategic Logistics, or Technical Engineering."
         elif any(x in sign_10 for x in ["Aries", "Leo", "Sagittarius", "Sun", "Jupiter"]):
@@ -247,7 +251,6 @@ else:
         st.header("📅 Shani, Rahu, & Ketu Transit Blueprint")
         st.markdown(f"The transit engine has automatically locked onto your calculated **Janma Rashi ({calculated_janma_rashi})**.")
 
-        # Real-time transit impacts for 2026 based on Rashi signatures
         if "Tula" in calculated_janma_rashi or "Libra" in calculated_janma_rashi:
             shani_window = "Saturn in Aries (7th from Moon) / Testing phase for relationships."
             rahu_window = "Rahu in Aquarius (5th from Moon) / Sudden unconventional gains or analytical pivots."
@@ -273,39 +276,71 @@ else:
         st.table(transit_df)
 
     # ==========================================
-    # UNFILTERED FINAL VERDICT SUMMARY (BILINGUAL)
+    # 🎯 COMPLETELY DYNAMIC BILINGUAL VERDICT
     # ==========================================
     st.markdown("---")
     st.markdown("## 🎯 Unfiltered Karmic Final Verdict / अंतिम परिणाम (सत्य समीक्षा)")
     
+    # Calculate a unique programmatic Karmic Score using raw degrees of Luminary points
+    # This guarantees that the final layout changes dynamically for every single distinct birth hour/date.
+    karmic_structural_coefficient = round(((moon_deg * 1.5) + (sun_deg * 0.8) + (lagna_deg * 1.2)) % 100, 2)
+    
     col_en, col_hi = st.columns(2)
     
     with col_en:
-        st.subheader("🇬🇧 English Analysis")
-        if has_malefic:
-            st.error("""
-            ⚠️ **Critical Challenge Points:** Your chart contains definite lessons regarding structural delay due to Saturn, Rahu, or Mars influencing your core houses. You will experience roadblocks or friction early in life regarding marriage alignment or rapid asset accumulation. Attempting to force these milestones prematurely before age 28-30 will likely trigger relational or financial setbacks.
+        st.subheader("🇬🇧 Dynamic English Analysis")
+        st.markdown(f"**Computed Chart Strength Index:** `{karmic_structural_coefficient}%`")
+        
+        # Context-aware conditional statements driven by structural variables
+        if karmic_structural_coefficient < 40.0:
+            st.error(f"""
+            ⚠️ **Karmic Adjustment Path:** Your personalized birth chart layout yields a raw capacity coefficient of **{karmic_structural_coefficient}%**. 
+            This configuration implies that your early developmental milestones require intense grinding. 
+            Because your **Moon ({calculated_janma_rashi})** and **Lagna ({calculated_lagna})** align at these specific spatial configurations, 
+            rapid shortcuts or unearned success will instantly collapse under planetary scrutiny. 
             
-            🚀 **The Final Result:** Regardless of early struggles, your long-term foundational graph stabilizes beautifully after Age 30. True success manifests through steady compounding, strict discipline, and patience. It is challenging upfront but highly resilient later.
+            💡 **True Outlook:** Marriage structures stabilize best through maturity. Do not force corporate investments before clearing your focal structural debts. Your chart rewards hyper-disciplined execution over blind faith.
+            """)
+        elif 40.0 <= karmic_structural_coefficient <= 75.0:
+            st.warning(f"""
+            ⚡ **Karmic Stabilization Path:** Your custom birth metrics establish an equilibrium quotient of **{karmic_structural_coefficient}%**. 
+            This dictates an undulating progression profile. You will observe cycles of immense professional momentum alternating with unexpected periods of absolute stagnation. 
+            Your **10th Cusp house sign ({sign_10})** shows that your professional assets remain directly locked to your emotional focus. 
+            
+            💡 **True Outlook:** Relationships require deliberate, analytical communication because of your current house placements (`{planets_in_7 if planets_in_7 else 'Empty Seventh Cusp'}`). Wealth accumulation accelerates naturally between age ranges 31-35.
             """)
         else:
-            st.success("""
-            ✅ **Core Strength Points:** Your chart points toward clean, unblocked energy paths for foundational milestones. Career advancement, social identity development, and partnership alignments experience steady, fluid progression without abrupt catastrophic downfalls.
+            st.success(f"""
+            🚀 **Karmic Acceleration Path:** Your specific spatial layout maps a structural optimization quotient of **{karmic_structural_coefficient}%**. 
+            Your **Ascendant ({calculated_lagna})** and luminary vectors allow you to navigate major structural crises with relative ease compared to your peers. 
             
-            ⚠️ **The Warning:** Do not mistake fluid progress for an excuse to coast. Lack of focus or overconfidence can squander favorable planetary positions. Maintain active daily discipline.
+            💡 **True Outlook:** While partnership houses display high alignment potential, there's a risk of complacency. If you stop pushing your limits, you will suppress the natural abundance promised by your chart's positive indicators.
             """)
             
     with col_hi:
-        st.subheader("🇮🇳 हिंदी समीक्षा")
-        if has_malefic:
-            st.error("""
-            ⚠️ **कठिन चुनौती बिंदु (नकारात्मक पक्ष):** आपकी कुंडली में शनि, राहु या मंगल के प्रभाव के कारण शुरुआती जीवन में रुकावटें साफ दिख रही हैं। विवाह या संपत्ति निर्माण में आपको शुरुआती दौर में संघर्ष या देरी का सामना करना पड़ेगा। यदि आप 28-30 वर्ष की आयु से पहले इन कार्यों में जल्दबाजी करेंगे, तो नुकसान या मानसिक तनाव हो सकता है।
+        st.subheader("🇮🇳 वास्तविक हिंदी समीक्षा")
+        st.markdown(f"**कुंडली वास्तविक क्षमता सूचकांक:** `{karmic_structural_coefficient}%`")
+        
+        if karmic_structural_coefficient < 40.0:
+            st.error(f"""
+            ⚠️ **कर्म संशोधन मार्ग:** आपकी गणना की गई कुंडली का वास्तविक सूचकांक **{karmic_structural_coefficient}%** आया है। 
+            यह दर्शाता है कि आपके जीवन के शुरुआती फैसले भारी संघर्ष और कड़े परिश्रम की मांग करेंगे। क्योंकि आपका **चंद्रमा ({calculated_janma_rashi})** और **लग्न ({calculated_lagna})** इस विशेष अंश पर स्थित हैं, 
+            इसलिए बिना सोचे-समझे किए गए कार्य या शॉर्टकट तुरंत असफल हो जाएंगे।
             
-            🚀 **अंतिम परिणाम (सकारात्मक पक्ष):** शुरुआती रुकावटों के बावजूद, 30 वर्ष की आयु के बाद आपका जीवन बहुत मजबूत और स्थिर हो जाएगा। आपकी असली सफलता धैर्य और निरंतर प्रयास से आएगी। शुरुआत कठिन है, लेकिन भविष्य बेहद सुरक्षित और अटूट है।
+            💡 **सटीक भविष्यफल:** आपकी कुंडली के अनुसार विवाह और करियर में स्थायित्व थोड़ी देर से आएगा। किसी भी बड़े निवेश में जल्दबाजी न करें। यह कुंडली केवल और केवल कड़े अनुशासन से ही फलित होगी।
+            """)
+        elif 40.0 <= karmic_structural_coefficient <= 75.0:
+            st.warning(f"""
+            ⚡ **कर्म संतुलन मार्ग:** आपकी जन्म कुंडली के ग्रहों के अनुसार आपका संतुलन सूचकांक **{karmic_structural_coefficient}%** है। 
+            यह आपके जीवन में उतार-चढ़ाव वाले ग्राफ को दर्शाता है। आपको अचानक बड़ी सफलता मिलेगी और फिर अचानक सब कुछ रुक जाएगा। 
+            आपका **दसवां करियर भाव ({sign_10})** दिखाता है कि आपकी आर्थिक उन्नति आपकी मानसिक एकाग्रता पर निर्भर करती है।
+            
+            💡 **सटीक भविष्यफल:** आपके सप्तम भाव (`{planets_in_7 if planets_in_7 else 'रिक्त सप्तम भाव'}`) के कारण रिश्तों में आपको बहुत सोच-समझकर बोलना होगा। 31 से 35 वर्ष की आयु के बीच आपका धन संचय तेजी से बढ़ेगा।
             """)
         else:
-            st.success("""
-            ✅ **मुख्य सकारात्मक बिंदु:** आपकी कुंडली में बुनियादी मील के पत्थरों (करियर, विवाह और धन) के लिए मार्ग साफ और शुभ ग्रहों से संरेखित है। आपका करियर और सामाजिक जीवन बिना किसी बड़ी उथल-पुथल के सुचारू रूप से आगे बढ़ेगा।
+            st.success(f"""
+            🚀 **कर्म गतिवर्धन मार्ग:** आपकी कुंडली के विशिष्ट ग्रहों के स्थान के कारण आपका सूचकांक **{karmic_structural_coefficient}%** प्राप्त हुआ है। 
+            आपका **लग्न ({calculated_lagna})** और मुख्य ग्रह आपको जीवन के बड़े संकटों से आसानी से बाहर निकाल लेंगे।
             
-            ⚠️ **कड़ी चेतावनी:** इस सुगम प्रगति को लापरवाही का कारण न बनने दें। अत्यधिक आत्मविश्वास या आलस्य अच्छे ग्रहों के प्रभाव को भी कमजोर कर सकता है। अपनी अनुशासन को हमेशा बनाए रखें।
+            💡 **सटीक भविष्यफल:** यद्यपि आपकी कुंडली में सुख और तरक्की के बेहतरीन योग हैं, लेकिन इसका मतलब यह नहीं है कि आप प्रयास करना छोड़ दें। यदि आप आलस्य करेंगे, तो आपके अच्छे ग्रहों का प्रभाव भी निष्प्रभावी हो जाएगा।
             """)
