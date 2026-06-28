@@ -196,7 +196,7 @@ with tab2:
         m_name = st.text_input("Name", "Partner A", key="p1_name")
         m_loc = st.text_input("Birth City", "New Delhi", key="m1")
         m_time = non_slider_time_picker("tab2_m")
-        m_date = st.date_input("Birth Date", value=datetime.date(1111, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="m3")
+        m_date = st.date_input("Birth Date", value=datetime.date(1980, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="m3")
     with f_col:
         st.subheader("Partner B Details")
         f_name = st.text_input("Name", "Partner B", key="p2_name")
