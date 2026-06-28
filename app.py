@@ -23,6 +23,30 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "📅 Today's Indian Panchanga"
 ])
 
+# Helper function to render explicit Hour/Minute drop-downs avoiding slider implementations
+def non_slider_time_picker(key_prefix):
+    st.markdown("**Select Birth Time (AM/PM Selector)**")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        hr = c1.selectbox("Hour", list(range(1, 13)), index=2, key=f"{key_prefix}_hr") # Default 2 (for 14:30 / 2:30 PM)
+    with c2:
+        minute = c2.selectbox("Minute", [f"{i:02d}" for i in range(60)], index=30, key=f"{key_prefix}_min") # Default 30
+    with c3:
+        period = c3.selectbox("AM/PM", ["AM", "PM"], index=1, key=f"{key_prefix}_period") # Default PM
+        
+    # Convert back to 24-hour time object internally for VedAstro engine processing
+    hour_24 = int(hr)
+    if period == "PM" and hour_24 < 12:
+        hour_24 += 12
+    elif period == "AM" and hour_24 == 12:
+        hour_24 = 0
+        
+    return datetime.time(hour_24, int(minute))
+
+# Date configurations to bypass the 10-year constraint default bug
+MIN_DATE = datetime.date(1900, 1, 1)
+MAX_DATE = datetime.date(2026, 12, 31)
+
 # ==========================================
 # TAB 1: KUNDLI & DEEP SOUL READING
 # ==========================================
@@ -30,34 +54,34 @@ with tab1:
     st.header("Personal Birth Chart Details")
     st.markdown("Discover your core signs, ascendant profile, and divisional alignment translated into direct English.")
     
-    # Name addition input
     user_name = st.text_input("Your Name", "Seeker")
     
     col1, col2 = st.columns(2)
     with col1:
         location_input = st.text_input("Birth City/Town (India)", "New Delhi")
-        # Native Clock input with AM/PM support
-        time_input = st.time_input("Birth Time", datetime.time(14, 30))
+        time_input = non_slider_time_picker("tab1")
     with col2:
-        # Native Calendar input
-        date_input = st.date_input("Birth Date", datetime.date(1992, 10, 25))
+        # Fixed Year limit dynamically using min_value and max_value bounds
+        date_input = st.date_input(
+            "Birth Date (Use Year Selector Dropdown)", 
+            value=datetime.date(1992, 10, 25),
+            min_value=MIN_DATE,
+            max_value=MAX_DATE
+        )
         tz_input = st.text_input("Timezone Offset", "+05:30", disabled=True)
         
     if st.button("Calculate My Chart", key="calc_chart"):
         with st.spinner("Decoding your natal sky..."):
             try:
-                # Automate coordinate fetching inside India
                 geo_res = Calculate.AddressToGeoLocation(location_input + ", India")
                 loc = geo_res.Payload
                 
-                # Format native inputs into VedAstro string format: "HH:MM DD/MM/YYYY +05:30"
                 formatted_time = time_input.strftime("%H:%M")
                 formatted_date = date_input.strftime("%d/%m/%Y")
                 time_str = f"{formatted_time} {formatted_date} +05:30"
                 
                 birth_time = Time(time_str, loc)
                 
-                # Extract data safely
                 all_planet_data = Calculate.AllPlanetData(PlanetName.Sun, birth_time)
                 all_house_data = Calculate.AllHouseData(HouseName.House1, birth_time)
                 
@@ -66,7 +90,6 @@ with tab1:
                 
                 st.success(f"✅ Chart successfully generated for {user_name} using coordinates: Latitude {loc.Latitude}, Longitude {loc.Longitude}")
                 
-                # Safe JSON navigation to avoid crashes if structure varies
                 calculated_house_sign = "Detected"
                 if isinstance(house_json, dict):
                     calculated_house_sign = house_json.get("HouseBhavaChalitSign", {}).get("Name", "Detected")
@@ -83,18 +106,17 @@ with tab1:
                 with c3:
                     st.metric(label="🌌 D60 Past Karma State", value="Active Alignment")
                 
-                # Human Interpretation Paragraph
                 st.subheader(f"🗣️ What This Placement Means for {user_name}:")
                 st.markdown(f"""
-                * **Your Ascendant (Lagna) is {calculated_house_sign}:** This means your entire life's physical journey, personality style, and natural health disposition operate through the traits of {calculated_house_sign}. It dictates how you naturally react to life's surprises.
-                * **Your Sun is located in House {sun_house}:** In Vedic wisdom, the Sun represents your soul's true ego and core vitality. Sitting in House {sun_house}, your energy and main life focus will naturally gravitate towards the themes governed by this specific house sector (e.g., career, finances, or partnerships).
+                * **Your Ascendant (Lagna) is {calculated_house_sign}:** This means your entire life's physical journey operates through the traits of {calculated_house_sign}.
+                * **Your Sun is located in House {sun_house}:** Your core vitality gravitates towards the themes governed by this specific house sector.
                 """)
                     
                 with st.expander("View Full Raw Data Structure"):
                     st.json(house_json)
                     
             except Exception as e:
-                st.error(f"Calculation tracking error: {e}. Please ensure fields are valid and try again.")
+                st.error(f"Calculation tracking error: {e}. Please ensure data inputs match structural format constraints.")
 
 # ==========================================
 # TAB 2: MARRIAGE & GUNA MATCHING
@@ -108,14 +130,14 @@ with tab2:
         st.subheader("Your Details")
         m_name = st.text_input("Your Name", "Partner A")
         m_loc = st.text_input("Your City", "New Delhi", key="m1")
-        m_time = st.time_input("Your Time", datetime.time(14, 30), key="m2")
-        m_date = st.date_input("Your Date", datetime.date(1992, 10, 25), key="m3")
+        m_time = non_slider_time_picker("tab2_m")
+        m_date = st.date_input("Your Date", value=datetime.date(1992, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="m3")
     with f_col:
         st.subheader("Other Person's Details")
         f_name = st.text_input("Their Name", "Partner B")
         f_loc = st.text_input("Their City", "New Delhi", key="f1")
-        f_time = st.time_input("Their Time", datetime.time(14, 30), key="f2")
-        f_date = st.date_input("Their Date", datetime.date(1997, 6, 15), key="f3")
+        f_time = non_slider_time_picker("tab2_f")
+        f_date = st.date_input("Their Date", value=datetime.date(1997, 6, 15), min_value=MIN_DATE, max_value=MAX_DATE, key="f3")
         
     if st.button("Calculate Guna Match Score"):
         with st.spinner("Evaluating relationship matching scores..."):
@@ -131,12 +153,10 @@ with tab2:
                 matchReport = Calculate.MatchReport(boy_birth, girl_birth)
                 match_json = json.loads(Tools.AnyToJSON("", matchReport)) if matchReport else {}
                 
-                # Convert percentage score back to the traditional 36 Guna scale safely
                 percentage_score = match_json.get("KutaScore", 0.0) if isinstance(match_json, dict) else 0.0
                 gunas_matched = round((percentage_score / 100) * 36, 1)
                 gunas_not_matched = round(36 - gunas_matched, 1)
                 
-                # Display traditional Indian matching metrics
                 st.subheader(f"📊 Traditional Guna Scorecard: {m_name} & {f_name}")
                 c1, c2, c3 = st.columns(3)
                 with c1:
@@ -146,31 +166,15 @@ with tab2:
                 with c3:
                     st.metric(label="📈 Percentage Compatibility", value=f"{int(percentage_score)}%")
                 
-                # 🗣️ Human Language Verdict
-                st.subheader("🗣️ Match Interpretation in Plain English:")
-                if gunas_matched >= 25.0:
-                    st.balloons()
-                    st.success(f"🌟 **Excellent Match ({gunas_matched} Gunas):** This is an exceptionally high match score! It indicates that your temperaments, emotional states, and long-term destiny alignments are beautifully in sync.")
-                elif gunas_matched >= 18.0:
-                    st.info(f"⚖️ **Good Balanced Match ({gunas_matched} Gunas):** This passes the traditional minimum requirement of 18 Gunas. You have enough baseline friendship and compatibility to form a resilient partnership.")
-                else:
-                    st.warning(f"⚠️ **High Adjustment Required ({gunas_matched} Gunas):** This score falls below the traditional 18-Guna benchmark line. Success will require extra conscious communication and patience.")
-                
-                # Category breakdown mapping safely
                 embeds = match_json.get("Embeddings", []) if isinstance(match_json, dict) else []
                 if embeds and len(embeds) >= 8:
                     st.write("### 🔍 Category-by-Category Guna Breakdown:")
-                    
                     metrics_df = pd.DataFrame({
                         "Astrological Category": [
-                            "Varna (Work Profile & Ego Sync)", 
-                            "Vashya (Mutual Attraction & Influence)", 
-                            "Tara (Destiny Progression & Health)", 
-                            "Yoni (Physical Intimacy & Instincts)", 
-                            "Graha Maitram (Mental Friendship & Humor)", 
-                            "Gana (Temperament & Social Behavior)", 
-                            "Bhakoot (Emotional Connection & Family)", 
-                            "Nadi (Genetic Compatibility & Children)"
+                            "Varna (Work Profile & Ego Sync)", "Vashya (Mutual Attraction & Influence)", 
+                            "Tara (Destiny Progression & Health)", "Yoni (Physical Intimacy & Instincts)", 
+                            "Graha Maitram (Mental Friendship & Humor)", "Gana (Temperament & Social Behavior)", 
+                            "Bhakoot (Emotional Connection & Family)", "Nadi (Genetic Compatibility & Children)"
                         ],
                         "Max Points Possible": [1, 2, 3, 4, 5, 6, 7, 8],
                         "Your Matched Points": [embeds[0], embeds[1], embeds[2], embeds[3], embeds[4], embeds[5], embeds[6], embeds[7]]
@@ -191,8 +195,8 @@ with tab3:
     
     user_name_p = st.text_input("Name", "Seeker", key="prop_name")
     loc_p = st.text_input("Confirm Your Birth City", "New Delhi", key="prop_loc")
-    time_p = st.time_input("Confirm Your Birth Time", datetime.time(14, 30), key="prop_time")
-    date_p = st.date_input("Confirm Your Birth Date", datetime.date(1992, 10, 25), key="prop_date")
+    time_p = non_slider_time_picker("tab3_p")
+    date_p = st.date_input("Confirm Your Birth Date", value=datetime.date(1992, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="prop_date")
     
     if st.button("Analyze Career & Property Potential"):
         with st.spinner("Scanning material houses..."):
@@ -201,7 +205,6 @@ with tab3:
                 p_time_str = f"{time_p.strftime('%H:%M')} {date_p.strftime('%d/%m/%Y')} +05:30"
                 p_time_obj = Time(p_time_str, p_geo)
                 
-                # Fetch 4th house (Property) and 10th house (Career)
                 h4_raw = Calculate.AllHouseData(HouseName.House4, p_time_obj)
                 h10_raw = Calculate.AllHouseData(HouseName.House10, p_time_obj)
                 
@@ -211,22 +214,11 @@ with tab3:
                 arudha_4 = h4_data.get("ArudhaOfHouse", "House4") if isinstance(h4_data, dict) else "House4"
                 arudha_10 = h10_data.get("ArudhaOfHouse", "House10") if isinstance(h10_data, dict) else "House10"
                 
-                # Human Translations
                 st.subheader(f"💼 1. Job, Professional Stability & Career Tracks for {user_name_p}")
-                st.markdown(f"""
-                Your professional destiny is tracked by the **10th House (Karma Sthana)** in your Kundli. 
-                The calculations reveal your active external manifestation anchor point is processing through **{arudha_10}**. 
-                
-                **What this means in plain English:** You possess a layout built for finding satisfaction in positions where you have clear duties and targets. Your career path will see noticeable expansions and financial progress whenever you enter major planetary transit cycles.
-                """)
+                st.markdown(f"Your external manifestation anchor point is processing through **{arudha_10}**.")
                 
                 st.subheader("🏠 2. House Construction, Land, & Property Possibilities")
-                st.markdown(f"""
-                In Vedic systems, your ability to purchase land, construct a home, or own physical property is governed by the **4th House (Sukha Sthana)**. 
-                Your chart displays an active property reflection point located in **{arudha_4}**.
-                
-                **What this means in plain English:** This is a favorable layout for property accumulation. It indicates that building a home or acquiring long-term assets is fully supported by your chart's baseline structure.
-                """)
+                st.markdown(f"Your chart displays an active property reflection point located in **{arudha_4}**.")
                 
             except Exception as e:
                 st.error(f"Could not calculate structural house blueprints: {e}")
@@ -258,10 +250,5 @@ with tab4:
                 st.info(f"🌌 Active Planetary Focal House: {focal_house}")
                 st.metric(label="✨ Core Cosmic Destiny Vector Point", value=destiny_point)
                 
-                st.subheader("🗣️ Daily Guidance Translation:")
-                st.write("""
-                Today's transit alignments suggest focusing energy on building community connections and network circles. 
-                Planetary currents favor stabilizing existing tasks rather than starting major impulsive projects. Perfect for reflecting and planning.
-                """)
             except Exception as e:
                 st.error(f"Could not load transit analytics: {e}")
