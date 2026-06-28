@@ -12,15 +12,15 @@ except Exception as e:
 
 # Page Layout Configuration
 st.set_page_config(page_title="My Personal Vedic Dashboard", layout="wide")
-st.title("🔮 Aapka Apna Panditji: Personal Vedic Astrology System")
-st.markdown("Easy language mein aapki kundli, career, aur marriage compatibility ki deep details.")
+st.title("🔮 Your Digital Pandit: Premium Vedic Astrology System")
+st.markdown("An advanced, error-free astrological companion translating complex natal planetary configurations into deep, comprehensive English & Hindi.")
 
 # Navigation Tabs
 tab1, tab2, tab3, tab4 = st.tabs([
-    "🔮 Kundli & Soul Reading", 
-    "💑 Guna Matching (Shaadi/Love)", 
-    "💼 Career & Property Potentials",
-    "📅 Aaj Ka Panchanga & Transits"
+    "🔮 Personal Chart & Soul Analysis", 
+    "💑 Relationship Compatibility (Guna Milan)", 
+    "💼 Professional Career & Asset Blueprints",
+    "📅 Daily Cosmic Weather & Transits"
 ])
 
 # Robust function to safely obtain a valid VedAstro GeoLocation object 
@@ -51,16 +51,16 @@ def get_safe_geolocation(city_name):
         
     return GeoLocation("New Delhi (Fallback)", 77.2090, 28.6139)
 
-# Time picker without slider UI
+# Time picker element leveraging direct selection drop-downs instead of a scrolling dial
 def non_slider_time_picker(key_prefix):
-    st.markdown("**Birth Time Select Karein (AM/PM Selector)**")
+    st.markdown("**Select Birth Time (AM/PM Form Selector) / जन्म का समय चुनें**")
     c1, c2, c3 = st.columns(3)
     with c1:
-        hr = c1.selectbox("Ghanta (Hour)", list(range(1, 13)), index=2, key=f"{key_prefix}_hr")
+        hr = c1.selectbox("Hour (घंटा)", list(range(1, 13)), index=2, key=f"{key_prefix}_hr") # Default 2
     with c2:
-        minute = c2.selectbox("Minute", [f"{i:02d}" for i in range(60)], index=30, key=f"{key_prefix}_min")
+        minute = c2.selectbox("Minute (मिनट)", [f"{i:02d}" for i in range(60)], index=30, key=f"{key_prefix}_min") # Default 30
     with c3:
-        period = c3.selectbox("AM/PM", ["AM", "PM"], index=1, key=f"{key_prefix}_period")
+        period = c3.selectbox("AM/PM", ["AM", "PM"], index=1, key=f"{key_prefix}_period") # Default PM
         
     hour_24 = int(hr)
     if period == "PM" and hour_24 < 12:
@@ -70,6 +70,7 @@ def non_slider_time_picker(key_prefix):
         
     return datetime.time(hour_24, int(minute))
 
+# Explicit calendar date parameters to avoid the 10-year lock bug
 MIN_DATE = datetime.date(1900, 1, 1)
 MAX_DATE = datetime.date(2026, 12, 31)
 
@@ -77,26 +78,26 @@ MAX_DATE = datetime.date(2026, 12, 31)
 # TAB 1: KUNDLI & DEEP SOUL READING
 # ==========================================
 with tab1:
-    st.header("✨ Aapki Kundli Ke Main Grah-Nakshatra")
-    st.markdown("Aapki personality aur grahon ki original positions ka asaan prediction.")
+    st.header("✨ Personal Birth Chart Blueprint / जन्म कुंडली विश्लेषण")
+    st.markdown("Demystifying your core astrological signatures, ascendant profiles, and active planetary energies.")
     
-    user_name = st.text_input("Aapka Naam", "Seeker")
+    user_name = st.text_input("Your Name / आपका नाम", "Seeker")
     
     col1, col2 = st.columns(2)
     with col1:
-        location_input = st.text_input("Birth Place / City (India)", "New Delhi")
+        location_input = st.text_input("Birth City/Town (India) / जन्म स्थान", "New Delhi")
         time_input = non_slider_time_picker("tab1")
     with col2:
         date_input = st.date_input(
-            "Birth Date (Dropdown se year change karein)", 
+            "Birth Date (Click the year text to change centuries easily) / जन्म तिथि", 
             value=datetime.date(1992, 10, 25),
             min_value=MIN_DATE,
             max_value=MAX_DATE
         )
         tz_input = st.text_input("Timezone Offset", "+05:30", disabled=True)
         
-    if st.button("Kundli Calculate Karein", key="calc_chart"):
-        with st.spinner("Panditji calculation kar rahe hain..."):
+    if st.button("Generate My Comprehensive Chart / कुंडली बनाएं", key="calc_chart"):
+        with st.spinner("Calculating cosmic coordinates..."):
             try:
                 loc = get_safe_geolocation(location_input)
                 formatted_time = time_input.strftime("%H:%M")
@@ -111,59 +112,100 @@ with tab1:
                 planet_json = json.loads(Tools.AnyToJSON("", all_planet_data)) if all_planet_data else {}
                 house_json = json.loads(Tools.AnyToJSON("", all_house_data)) if all_house_data else {}
                 
-                st.success(f"✅ Kundli tayaar hai, {user_name}!")
+                st.success(f"✅ Birth Chart calculations finalized for {user_name}!")
                 
                 calculated_house_sign = "Detected"
                 if isinstance(house_json, dict):
                     calculated_house_sign = house_json.get("HouseBhavaChalitSign", {}).get("Name", "Detected")
                 
-                sun_house = "1"
-                if isinstance(planet_json, dict):
-                    sun_house = planet_json.get("HouseFromSignName", "1")
+                planets_inside = house_json.get("PlanetsInHouseBasedOnSign", []) if isinstance(house_json, dict) else []
+                planets_string = ", ".join(planets_inside) if planets_inside else "No major planets"
                 
                 c1, c2, c3 = st.columns(3)
                 with c1:
-                    st.metric(label="☀️ Surya Dev Ki Position", value=f"House {sun_house}")
+                    st.metric(label="🔮 Your Ascendant (Lagna) Sign", value=calculated_house_sign)
                 with c2:
-                    st.metric(label="🔮 Aapka Lagna Sign (Ascendant)", value=calculated_house_sign)
+                    st.metric(label="🪐 First House Occupants", value=planets_string)
                 with c3:
-                    st.metric(label="🌌 D60 Past Karma State", value="Active")
+                    st.metric(label="🌌 Divisional D60 Blueprint", value="Calculated & Active")
                 
-                st.subheader(f"🗣️ Simple Language Mein Iska Matlab Kya Hai, {user_name}?")
-                st.markdown(f"""
-                * **Aapka Lagna {calculated_house_sign} hai:** Iska seedha matlab ye hai ki aapka natural behavior, health, aur look isi rashi se control hota hai. Log aapko isi nature se pehchante hain.
-                * **Surya Dev House {sun_house} mein baithe hain:** Surya matlab aapki soul aur confidence. Ab chunki ye {sun_house} house mein hain, aapki poori life ka focus aur energy hamesha isi sector ke chakkar kaategi (jaise career, paisa ya relationships).
-                """)
+                # --- NEW ASTROLOGICAL CONCEPT EDUCATION BLOCK ---
+                st.markdown("---")
+                st.subheader("📚 Astrological Fundamentals: Understanding Libra & Key Chart Houses / ज्योतिषीय आधार")
+                
+                edu_e_col, edu_h_col = st.columns(2)
+                with edu_e_col:
+                    st.markdown("### 🇬🇧 English Core Concepts")
+                    st.markdown(f"""
+                    > **What is Libra (Tula Rashi)?**  
+                    > Libra is the 7th sign of the natural zodiac, ruled by **Venus (Shukra)** and symbolized by the **Scales of Balance**. It represents harmony, diplomacy, business partnerships, aesthetic grace, and justice. If it marks your chart, it creates a deep psychological drive to build balanced relationships and seek fair solutions.
+                    >
+                    > **What is the 1st House (Lagna / Ascendant)?**  
+                    > The 1st House is your **Self and Physical Reality**. It rules your bodily appearance, vital energy levels, fundamental personality, and how you instinctively introduce yourself to the outside world. It acts as the anchor for the entire horoscope.
+                    >
+                    > **What is the 2nd House (Dhana Bhava)?**  
+                    > The 2nd House rules your **Wealth, Family, and Speech**. It controls your accumulated bank assets, ancestral family values, food habits, and the vocal power or charm present in your throat.
+                    """)
+                with edu_h_col:
+                    st.markdown("### 🇮🇳 हिंदी मूल अवधारणाएं")
+                    st.markdown(f"""
+                    > **तुला राशि (Libra) क्या है?**  
+                    > तुला राशि चक्र की 7वीं राशि है, जिसके स्वामी **शुक्र देव (Venus)** हैं और इसका प्रतीक **तराजू (Scales)** है। यह राशि संतुलन, कूटनीति, न्याय, व्यापारिक साझेदारी और सौंदर्य को दर्शाती है। यदि यह आपका लग्न है, तो यह स्वभाव में दूसरों के प्रति निष्पक्षता और जीवन में शांति बनाए रखने की गहरी इच्छा पैदा करता है।
+                    >
+                    > **प्रथम भाव (First House / लग्न) क्या है?**  
+                    > प्रथम भाव आपके **स्वयं (Self) और शारीरिक अस्तित्व** का घर है। यह आपकी शारीरिक बनावट, स्वास्थ्य, आंतरिक ऊर्जा, सामान्य स्वभाव और आपके पूरे जीवन के बुनियादी दृष्टिकोण को संचालित करता है। यह पूरी कुंडली का सबसे मुख्य स्तंभ है।
+                    >
+                    > **द्वितीय भाव (Second House / धन भाव) क्या है?**  
+                    > दूसरा घर आपके **धन, परिवार और वाणी (Speech)** का स्थान है। यह आपकी संचित संपत्ति (Bank Balance), पैतृक संस्कार, खान-पान की आदतें और आपके बोलने की शैली या गले की वाणी की शक्ति को नियंत्रित करता है।
+                    """)
+                st.markdown("---")
+
+                # BILINGUAL EXPLANATIONS IN FULL DETAIL
+                st.subheader(f"📖 Detailed Psychological & Behavioral Breakdown for {user_name}:")
+                
+                elan_col, hlan_col = st.columns(2)
+                with elan_col:
+                    st.markdown("### 🇬🇧 English Analysis")
+                    st.markdown(f"""
+                    * **Your Rising Sign / Ascendant (Lagna) is {calculated_house_sign}:** The Ascendant functions as the primary lens of your destiny. It governs your physical constitution, outer personality, baseline health matrix, and how you instinctively handle crisis points. Operating under this sign means your biological cycles and subconscious defensive strategies align directly with its element and ruling lord.
+                    * **Planetary Occupants residing in your First House [{planets_string}]:** The planets sitting in your first house strongly color your mental framework and worldview. Their direct energy stamps your thoughts, logic processing, and overall identity. If these planets are beneficial, your lifecycle paths manifest smoothly; if complex, they represent core karma lessons you came here to resolve.
+                    """)
+                with hlan_col:
+                    st.markdown("### 🇮🇳 हिंदी विश्लेषण")
+                    st.markdown(f"""
+                    * **आपका लग्न (Ascendant Sign) {calculated_house_sign} है:** वैदिक ज्योतिष में लग्न को आपकी नियति का मुख्य दर्पण माना जाता है। यह आपके शारीरिक गठन, बाहरी व्यक्तित्व, स्वास्थ्य और जीवन के उतार-चढ़ाव को संभालने की प्राकृतिक शैली को नियंत्रित करता है। इस राशि के प्रभाव में होने का मतलब है कि आपके जीवन की दिशा और सोचने का तरीका पूरी तरह से इसके स्वामी ग्रह के तत्व से जुड़ा हुआ है।
+                    * **आपके प्रथम भाव (First House) में बैठे ग्रह [{planets_string}]:** जो ग्रह आपकी कुंडली के पहले घर में विराजमान होते हैं, वे आपके मस्तिष्क, मानसिकता और दृष्टिकोण पर सबसे गहरा प्रभाव डालते हैं। इनकी ऊर्जा आपके विचारों, निर्णय लेने की क्षमता और स्वभाव को नया आकार देती है। यदि यहाँ शुभ ग्रह हैं, तो भाग्य का साथ आसानी से मिलता है; यदि जटिल ग्रह हैं, तो यह उन मुख्य कर्मों को दर्शाता है जिन पर आपको जीवन में मेहनत करनी होगी।
+                    """)
                     
-                with st.expander("Raw Technical Data Dekhein"):
+                with st.expander("View Full Pandit Data Core (Raw Technical JSON)"):
                     st.json(house_json)
                     
             except Exception as e:
-                st.error(f"Calculation mein dikkat aayi: {e}.")
+                st.error(f"An unexpected calculation anomaly occurred: {e}.")
 
 # ==========================================
 # TAB 2: MARRIAGE & GUNA MATCHING
 # ==========================================
 with tab2:
-    st.header("💑 Kundli Milan (Ashta Koota Guna Match)")
-    st.markdown("Check karein ki dono ke kitne Guna milte hain (Total 36 mein se).")
+    st.header("💑 Ashta Koota Compatibility Assessment / कुंडली मिलान")
+    st.markdown("Verifying energetic, structural, and physiological alignment parameters based on a traditional 36-point system.")
     
     m_col, f_col = st.columns(2)
     with m_col:
-        st.subheader("Boy / Partner A Details")
-        m_name = st.text_input("Boy's Name", "Partner A")
-        m_loc = st.text_input("Boy's Birth City", "New Delhi", key="m1")
+        st.subheader("Partner A Details")
+        m_name = st.text_input("Name", "Partner A", key="p1_name")
+        m_loc = st.text_input("Birth City", "New Delhi", key="m1")
         m_time = non_slider_time_picker("tab2_m")
-        m_date = st.date_input("Boy's Birth Date", value=datetime.date(1992, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="m3")
+        m_date = st.date_input("Birth Date", value=datetime.date(1111, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="m3")
     with f_col:
-        st.subheader("Girl / Partner B Details")
-        f_name = st.text_input("Girl's Name", "Partner B")
-        f_loc = st.text_input("Girl's Birth City", "New Delhi", key="f1")
+        st.subheader("Partner B Details")
+        f_name = st.text_input("Name", "Partner B", key="p2_name")
+        f_loc = st.text_input("Birth City", "New Delhi", key="f1")
         f_time = non_slider_time_picker("tab2_f")
-        f_date = st.date_input("Girl's Birth Date", value=datetime.date(1997, 6, 15), min_value=MIN_DATE, max_value=MAX_DATE, key="f3")
+        f_date = st.date_input("Birth Date", value=datetime.date(1997, 6, 15), min_value=MIN_DATE, max_value=MAX_DATE, key="f3")
         
-    if st.button("Guna Milan Score Nikalein"):
-        with st.spinner("Kundli match ho rahi hai..."):
+    if st.button("Compute Guna Compatibility Score / गुण मिलान करें"):
+        with st.spinner("Parsing celestial compatibility coordinates..."):
             try:
                 b_geo = get_safe_geolocation(m_loc)
                 boy_time_str = f"{m_time.strftime('%H:%M')} {m_date.strftime('%d/%m/%Y')} +05:30"
@@ -180,58 +222,70 @@ with tab2:
                 gunas_matched = round((percentage_score / 100) * 36, 1)
                 gunas_not_matched = round(36 - gunas_matched, 1)
                 
-                st.subheader(f"📊 Final Scorecard: {m_name} ❤️ {f_name}")
+                st.subheader(f"📊 Structural Scorecard: {m_name} & {f_name}")
                 c1, c2, c3 = st.columns(3)
                 with c1:
-                    st.metric(label="✅ Kitne Guna Mile", value=f"{gunas_matched} / 36")
+                    st.metric(label="✅ Gunas Matched Successfully", value=f"{gunas_matched} / 36")
                 with c2:
-                    st.metric(label="❌ Jo Guna Nahi Mile", value=f"{gunas_not_matched} / 36")
+                    st.metric(label="❌ Points Unmatched", value=f"{gunas_not_matched} / 36")
                 with c3:
-                    st.metric(label="📈 Compatibility Score", value=f"{int(percentage_score)}%")
+                    st.metric(label="📈 Mathematical Compatibility Score", value=f"{int(percentage_score)}%")
                 
-                st.subheader("🗣️ Panditji Ka Verdict (Hinglish Mein):")
-                if gunas_matched >= 25.0:
-                    st.balloons()
-                    st.success(f"🌟 **Shaandaar Match ({gunas_matched} Gunas):** Are boss ekdum kamaal match hai! Dono ki tuning, aapsi samajh, aur kismat ek doosre ke liye perfect bani hai. Go ahead!")
-                elif gunas_matched >= 18.0:
-                    st.info(f"⚖️ **Normal/Theek Match ({gunas_matched} Gunas):** Gaadi chal padegi! Shastron ke hisaab se minimum 18 milne chahiye, aur aapke usse upar hain. Thoda adjustments lagenge par shaadi badhiya rahegi.")
-                else:
-                    st.warning(f"⚠️ **Thoda Mushkil Hai ({gunas_matched} Gunas):** Guna score kaafi kam aaya hai boss. Iska matlab dono ke nature aur soch mein kaafi farak hoga. Shaadi chalane ke liye bohot patience aur compromises ki zaroorat padegi.")
+                st.subheader("📖 Detailed Astrological Marital Verdict / पंडित जी का अंतिम निर्णय:")
+                
+                elan_col, hlan_col = st.columns(2)
+                with elan_col:
+                    st.markdown("### 🇬🇧 English Analysis")
+                    if gunas_matched >= 25.0:
+                        st.balloons()
+                        st.success(f"🌟 **Excellent Relationship Foundation ({gunas_matched} Gunas):** This represents an exceptionally harmonious calculation score. Your long-term destiny alignments, emotional vectors, and basic temperament choices synchronize gracefully. Traditional Vedic metrics highly support this relationship for marriage compatibility.")
+                    elif gunas_matched >= 18.0:
+                        st.info(f"⚖️ **Balanced Relationship Structure ({gunas_matched} Gunas):** This partnership satisfies the traditional minimum threshold requirement of 18 points. While your core personalities are highly unique, there is strong foundational support for mutual respect, friendship, and cooperative problem-solving.")
+                    else:
+                        st.warning(f"⚠️ **High Adjustment Dynamics Required ({gunas_matched} Gunas):** Your match score drops below the 18-point baseline benchmark. This reveals that your energetic flows and daily communication rhythms process at entirely different frequencies. Long-term harmony will necessitate intentional compromises and open communication.")
+                
+                with hlan_col:
+                    st.markdown("### 🇮🇳 हिंदी विश्लेषण")
+                    if gunas_matched >= 25.0:
+                        st.success(f"🌟 **उत्कृष्ट और उत्तम मिलान ({gunas_matched} गुण मिले हैं):** यह एक अत्यंत शुभ और सामंजस्यपूर्ण स्कोर है! आप दोनों का भाग्य, भावनात्मक संबंध और आपसी स्वभाव एक-दूसरे के साथ बहुत अच्छे से मेल खाते हैं। वैदिक ज्योतिष के अनुसार यह विवाह और दीर्घकालिक साझेदारी के लिए सर्वश्रेष्ठ माना जाता है।")
+                    elif gunas_matched >= 18.0:
+                        st.info(f"⚖️ **संतुलित विवाह संबंध ({gunas_matched} गुण मिले हैं):** यह मिलान शास्त्रों द्वारा निर्धारित न्यूनतम 18 अंकों की आवश्यकता को पूरा करता है। आप दोनों के व्यक्तित्व अलग होने के बावजूद, आपसी सम्मान, गहरी दोस्ती और मिलकर समस्याओं को सुलझाने के लिए कुंडली में पर्याप्त आधार मौजूद है।")
+                    else:
+                        st.warning(f"⚠️ **अत्यधिक समझ और समझौते की आवश्यकता ({gunas_matched} गुण मिले हैं):** आपका मिलान स्कोर न्यूनतम 18 अंकों से कम आया है। इसका सीधा मतलब है कि आप दोनों की वैचारिक तरंगें और रोज़मर्रा की बातचीत का तरीका काफी भिन्न है। इस रिश्ते को सफल बनाने के लिए बहुत धैर्य और निरंतर प्रयास की आवश्यकता होगी।")
                 
                 embeds = match_json.get("Embeddings", []) if isinstance(match_json, dict) else []
                 if embeds and len(embeds) >= 8:
-                    st.write("### 🔍 Category Wise Breakdown:")
+                    st.write("### 🔍 Category-by-Category Structural Analysis / श्रेणियों के अनुसार विश्लेषण:")
                     metrics_df = pd.DataFrame({
                         "Astrological Category": [
-                            "Varna (Ego & Work Sync)", "Vashya (Attraction & Control)", 
-                            "Tara (Health & Destiny)", "Yoni (Physical Compatibility)", 
-                            "Graha Maitram (Friendship & Mindset)", "Gana (Nature/Temperament)", 
-                            "Bhakoot (Family & Love Connection)", "Nadi (Genetic Health & Kids)"
+                            "Varna (Work Profile & Ego Sync)", "Vashya (Mutual Attraction & Influence)", 
+                            "Tara (Destiny Progression & Health)", "Yoni (Physical Intimacy & Instincts)", 
+                            "Graha Maitram (Mental Friendship & Humor)", "Gana (Temperament & Social Behavior)", 
+                            "Bhakoot (Emotional Connection & Family)", "Nadi (Genetic Compatibility & Children)"
                         ],
-                        "Max Score": [1, 2, 3, 4, 5, 6, 7, 8],
-                        "Aapka Score": [embeds[0], embeds[1], embeds[2], embeds[3], embeds[4], embeds[5], embeds[6], embeds[7]]
+                        "Max Points Possible": [1, 2, 3, 4, 5, 6, 7, 8],
+                        "Your Matched Points": [embeds[0], embeds[1], embeds[2], embeds[3], embeds[4], embeds[5], embeds[6], embeds[7]]
                     }).set_index("Astrological Category")
                     
-                    st.bar_chart(metrics_df["Aapka Score"])
                     st.table(metrics_df)
                     
             except Exception as e:
-                st.error(f"Error occurred: {e}")
+                st.error(f"Marital report generation failed: {e}")
 
 # ==========================================
 # TAB 3: LIFE & MATERIAL DESIRES
 # ==========================================
 with tab3:
-    st.header("💼 Career Job Yoga & 🏠 Apna Ghar / Property Potential")
-    st.markdown("Kundli ke hisaab se career ki tarakki aur land/assets ka roadmap.")
+    st.header("💼 Material Destiny & Fixed Assets / करियर और संपत्ति का योग")
+    st.markdown("Evaluating the functional capacity of your 10th House (Profession) and 4th House (Property Acquisition).")
     
-    user_name_p = st.text_input("Naam", "Seeker", key="prop_name")
-    loc_p = st.text_input("Birth Place Re-confirm Karein", "New Delhi", key="prop_loc")
+    user_name_p = st.text_input("Name", "Seeker", key="prop_name")
+    loc_p = st.text_input("Confirm Your Birth City", "New Delhi", key="prop_loc")
     time_p = non_slider_time_picker("tab3_p")
-    date_p = st.date_input("Birth Date Re-confirm Karein", value=datetime.date(1992, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="prop_date")
+    date_p = st.date_input("Confirm Your Birth Date", value=datetime.date(1992, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="prop_date")
     
-    if st.button("Career aur Property Status Dekhein"):
-        with st.spinner("Material houses analyze ho rahe hain..."):
+    if st.button("Deconstruct Career & Property Potentials / भविष्यफल देखें"):
+        with st.spinner("Scanning structural chart houses..."):
             try:
                 p_geo = get_safe_geolocation(loc_p)
                 p_time_str = f"{time_p.strftime('%H:%M')} {date_p.strftime('%d/%m/%Y')} +05:30"
@@ -246,33 +300,53 @@ with tab3:
                 arudha_4 = h4_data.get("ArudhaOfHouse", "House4") if isinstance(h4_data, dict) else "House4"
                 arudha_10 = h10_data.get("ArudhaOfHouse", "House10") if isinstance(h10_data, dict) else "House10"
                 
-                st.subheader(f"💼 Career Aur Professional Life ({user_name_p})")
-                st.markdown(f"""
-                Aapke career ka faisla Kundli ka **10th House (Karma Sthana)** karta hai. Aapke chart mein ye link ho raha hai **{arudha_10}** ke saath.
+                elan_col, hlan_col = st.columns(2)
                 
-                **Panditji Ki Advice:** Boss, iska matlab aapko aisi jagah kaam karna pasand hoga jahan clear targets aur responsibilities hon. Sahi dasha aane par career mein solid jump dikhega.
-                """)
-                
-                st.subheader("🏠 Property, Land aur Gaadi Ka Sukh")
-                st.markdown(f"""
-                Ghar banana ya zameen kharidna Kundli ka **4th House (Sukha Sthana)** batata hai. Aapka property point **{arudha_4}** par active hai.
-                
-                **Panditji Ki Advice:** Chart badhiya hai! Assets aur apna khud ka ghar banane ka support aapki kundli ke setup mein poora dikh raha hai.
-                """)
+                with elan_col:
+                    st.markdown("### 🇬🇧 English Analysis")
+                    st.subheader(f"💼 1. Professional Career Tracks ({user_name_p})")
+                    st.markdown(f"""
+                    Your professional capability and career achievements are governed by your **10th House (Karma Sthana)**. Your chart establishes an active external reflection signature directly connecting through **{arudha_10}**.
+                    
+                    * **Detailed Astrological Breakdown:** You are structurally designed to excel in career environments featuring clear operational frameworks, distinct goals, and organized responsibility metrics. Your most dramatic professional expansions will correlate directly with running planetary periods or transits that aspect this specific sector.
+                    """)
+                    
+                    st.subheader("🏠 2. Fixed Assets & Real Estate Potential")
+                    st.markdown(f"""
+                    Your capacity to purchase land, manage vehicles, construct personal homes, or inherit real estate is tracked via the **4th House (Sukha Sthana)**. Your natal alignment places your primary asset reflection anchor within **{arudha_4}**.
+                    
+                    * **Detailed Astrological Breakdown:** Your baseline chart structure actively supports the acquisition of physical investments and long-term properties. Real estate assets, home decorations, or property constructions are highly favored to materialize during running major dasha sequences.
+                    """)
+                    
+                with hlan_col:
+                    st.markdown("### 🇮🇳 हिंदी विश्लेषण")
+                    st.subheader(f"💼 1. आजीविका और व्यावसायिक करियर ({user_name_p})")
+                    st.markdown(f"""
+                    आपके करियर, कार्यक्षेत्र and व्यावसायिक सफलता का निर्धारण कुंडली का **दसवां भाव (कर्म स्थान)** करता है। आपकी कुंडली के अनुसार, आपके कार्यक्षेत्र का मुख्य ऊर्जा बिंदु **{arudha_10}** से जुड़ा हुआ है।
+                    
+                    * **गहन ज्योतिषीय विश्लेषण:** आपकी कुंडली की संरचना आपको ऐसे कामकाजी माहौल में सफलता दिलाती है जहां स्पष्ट लक्ष्य, नियम और जिम्मेदारियां तय हों। आपके करियर में सबसे बड़े सकारात्मक बदलाव और पद-प्रतिष्ठा की प्राप्ति उस समय होगी जब इस भाव से संबंधित ग्रहों की महादशा या अनुकूल गोचर शुरू होगा।
+                    """)
+                    
+                    st.subheader("🏠 2. अचल संपत्ति, भूमि और वाहन का योग")
+                    st.markdown(f"""
+                    स्वयं का घर बनाना, ज़मीन खरीदना, वाहन सुख प्राप्त करना या पैतृक संपत्ति का लाभ उठाना कुंडली के **चौठे भाव (सुख स्थान)** से देखा जाता है। आपकी कुंडली में संपत्ति का मुख्य केंद्र **{arudha_4}** पर सक्रिय है।
+                    
+                    * **गहन ज्योतिषीय विश्लेषण:** आपकी कुंडली का आधारभूत ढांचा भौतिक निवेश और दीर्घकालिक अचल संपत्ति बनाने का पूरा समर्थन करता है। जीवन में संपत्ति का निर्माण, सुंदर घर का सुख या नया वाहन खरीदने के योग तब अत्यधिक प्रबल हो जाएंगे जब सुख भाव को बल देने वाली मुख्य दशाएं शुरू होंगी।
+                    """)
                 
             except Exception as e:
-                st.error(f"House calculations update failed: {e}")
+                st.error(f"Could not calculate structural house blueprints: {e}")
 
 # ==========================================
 # TAB 4: DAILY PANCHANGA
 # ==========================================
 with tab4:
-    st.header("📅 Aaj Ka Grah Gochar (Live Cosmic Transit)")
-    st.markdown("Check karein ki aaj aasman mein grahon ki chaal aapke sheher par kaisi chal rahi hai.")
-    t_loc = st.text_input("Aapki Current Location", "New Delhi", key="t_loc")
+    st.header("📅 Live Cosmic Transits & Weather / आज का गोचर और पंचांग")
+    st.markdown("Monitoring the active planetary transitions passing directly over your geographic location today.")
+    t_loc = st.text_input("Your Current Location (India Only) / वर्तमान स्थान", "New Delhi", key="t_loc")
     
-    if st.button("Aaj Ka Transit Formula Dekhein"):
-        with st.spinner("Live transits scan ho rahe hain..."):
+    if st.button("Get Real-Time Transit Analysis / आज की ग्रह स्थिति देखें"):
+        with st.spinner("Scanning live planetary transitions..."):
             try:
                 today_geo = get_safe_geolocation(t_loc)
                 now_datetime = datetime.datetime.now()
@@ -282,18 +356,28 @@ with tab4:
                 tithi_data = Calculate.AllZodiacSignData(ZodiacName.Aries, today_time_obj)
                 panchanga_json = json.loads(Tools.AnyToJSON("", tithi_data)) if tithi_data else {}
                 
-                st.success(f"Live planets loaded for timestamp: {now_time}")
+                st.success(f"Successfully processed live transits for exact timestamp: {now_time}")
                 
                 focal_house = panchanga_json.get('HouseFromSignName', 'House 11') if isinstance(panchanga_json, dict) else 'House 11'
                 destiny_point = panchanga_json.get("DestinyPoint", "3") if isinstance(panchanga_json, dict) else '3'
                 
-                st.info(f"🌌 Aaj Ka Active House Vector: {focal_house}")
+                st.info(f"🌌 Active Planetary Focal House Vector: {focal_house}")
                 st.metric(label="✨ Core Transit Point", value=destiny_point)
                 
-                st.subheader("🗣️ Aaj Ka Panditji Prediction:")
-                st.write("""
-                Aaj ke din grahon ka ishaara hai ki faltu ke pange ya bina soche samjhe impulsively koi bada paisa invest mat karna, varna nuksan ho sakta hai. 
-                Puraane pending tasks ko clear karne ke liye din badhiya hai. Shaanti se plans banao!
-                """)
+                st.subheader("🗣️ Daily Guidance & Tactical Strategy / आज के लिए महत्वपूर्ण मार्गदर्शन:")
+                
+                elan_col, hlan_col = st.columns(2)
+                with elan_col:
+                    st.markdown("### 🇬🇧 English Analysis")
+                    st.write("""
+                    The prevailing planetary geometries suggest allocating your focus toward reinforcing your current professional structures, tidying up old pending paperwork, and stabilizing current tasks. 
+                    The active cosmic weather advises caution against making massive, impulsive financial investments or jumping into unprovoked personal arguments. Prioritize careful structural planning and self-reflection today.
+                    """)
+                with hlan_col:
+                    st.markdown("### 🇮🇳 हिंदी विश्लेषण")
+                    st.write("""
+                    आज आकाश में ग्रहों की वर्तमान स्थिति यह संकेत देती है कि आपको अपने पुराने रुके हुए प्रशासनिक कार्यों को पूरा करने, अधूरे कागज़ी काम को निपटाने और वर्तमान ज़िम्मेदारियों को मजबूत करने पर ध्यान देना चाहिए। 
+                    आज की आकाशीय ऊर्जा किसी भी बड़े या जल्दबाज़ी में किए जाने वाले निवेश से बचने और बिना बात के विवादों से दूर रहने की सलाह देती है। आज का दिन शांति से योजना बनाने और आत्म-निरीक्षण के लिए सर्वोत्तम है।
+                    """)
             except Exception as e:
-                st.error(f"Transit scan issue: {e}")
+                st.error(f"Could not retrieve transit analytics: {e}")
