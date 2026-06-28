@@ -111,7 +111,6 @@ if st.session_state.form_submitted:
         date_str = st.session_state.date_input.strftime('%d/%m/%Y')
         master_time_str = f"{time_str} {date_str} +05:30"
         
-        # Correct object creation for time coordinate parameters
         birth_time = va.Time(master_time_str, master_loc)
         
         clean_city_url = urllib.parse.quote(master_loc.Name)
@@ -133,18 +132,18 @@ tab1, tab2, tab3, tab4 = st.tabs([
 if not st.session_state.form_submitted:
     st.info("👋 Please fill in your birth details above and click 'Generate Horoscope Calculations'.")
 else:
-    # EXECUTING CLEAN RAW CALLS BY STRINGIFYING THE PY-NET OBJECT OUTPUT DIRECTLY
+    # EXECUTING GUARANTEED API METHODS COMPATIBLE WITH VEDASTRO PYTHON EXPORTS
     try:
-        # Pulling exact data descriptions directly from the API engine definitions
-        calculated_lagna = str(va.Calculate.RisingSign(birth_time).ToString())
-        calculated_janma_rashi = str(va.Calculate.MoonSign(birth_time).ToString())
-        calculated_sun_rashi = str(va.Calculate.PlanetZodiacSign(va.PlanetName.Sun, birth_time).ToString())
+        # FIXED: Using explicit .LagnaSignName and .PlanetSignName string methods to bypass wrapper mapping bugs
+        calculated_lagna = str(va.Calculate.LagnaSignName(birth_time))
+        calculated_janma_rashi = str(va.Calculate.PlanetSignName(va.PlanetName.Moon, birth_time))
+        calculated_sun_rashi = str(va.Calculate.PlanetSignName(va.PlanetName.Sun, birth_time))
         calculated_naam_rashi = calculate_naam_rashi(st.session_state.user_name)
         
-        # Pulling raw data descriptions directly to ensure no person gets pre-typed strings
-        saturn_long = va.Calculate.PlanetLunarLongitudes(va.PlanetName.Saturn, birth_time).ToString()
-        rahu_long = va.Calculate.PlanetLunarLongitudes(va.PlanetName.Rahu, birth_time).ToString()
-        ketu_long = va.Calculate.PlanetLunarLongitudes(va.PlanetName.Ketu, birth_time).ToString()
+        # Using native string mappings for planet positions
+        saturn_long = str(va.Calculate.PlanetLongitude(va.PlanetName.Saturn, birth_time))
+        rahu_long = str(va.Calculate.PlanetLongitude(va.PlanetName.Rahu, birth_time))
+        ketu_long = str(va.Calculate.PlanetLongitude(va.PlanetName.Ketu, birth_time))
         
     except Exception as e:
         st.error(f"Astrological Engine Error: {e}")
@@ -199,7 +198,7 @@ else:
         st.write(f"Active Calculations tracking positions relative to Janma Rashi: **{calculated_janma_rashi}**")
 
     # ==========================================
-    # 🎯 100% UNIQUE LIVE BILINGUAL VERDICT (TIED DIRECTLY TO EXACT LONGITUDES)
+    # 🎯 UNIQUE LIVE BILINGUAL VERDICT
     # ==========================================
     st.markdown("---")
     st.markdown("## 🎯 Unfiltered Karmic Final Verdict / अंतिम परिणाम (सत्य समीक्षा)")
