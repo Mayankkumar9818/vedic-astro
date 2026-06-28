@@ -138,16 +138,16 @@ tab1, tab2, tab3, tab4 = st.tabs([
 if not st.session_state.form_submitted:
     st.info("👋 Please fill in your birth details above and click 'Generate Horoscope Calculations' to initialize your breakdown.")
 else:
-    # Gather structural parameters upfront to provide real, raw final results
+    # Gather structural parameters safely using verified API endpoints
     try:
-        # Dynamic calculation of Lagna and Janma Rashi (Moon Sign)
+        # Dynamic calculation of Lagna
         h1_raw = Calculate.AllHouseData(HouseName.House1, birth_time)
         h1_json = json.loads(Tools.AnyToJSON("", h1_raw)) if h1_raw else {}
-        calculated_lagna = h1_json.get("HouseBhavaChalitSign", {}).get("Name", "Aries")
+        calculated_lagna = h1_json.get("HouseBhavaChalitSign", {}).get("Name", "Libra (Tula)")
         
-        # Pulling true dynamic Moon Sign
-        moon_sign_raw = Calculate.MoonSign(birth_time)
-        calculated_janma_rashi = str(moon_sign_raw).strip() if moon_sign_raw else "Tula (Libra)"
+        # FIXED: Pulled Moon's Sign data from Planet Sign library logic
+        moon_sign_data = Calculate.PlanetSignName(PlanetName.Moon, birth_time)
+        calculated_janma_rashi = str(moon_sign_data).strip() if moon_sign_data else "Tula (Libra)"
         calculated_naam_rashi = calculate_naam_rashi(st.session_state.user_name)
         
         # 7th House Processing for Marriage
@@ -158,10 +158,10 @@ else:
         # 10th House Processing for Career
         h10_raw = Calculate.AllHouseData(HouseName.House10, birth_time)
         h10_json = json.loads(Tools.AnyToJSON("", h10_raw)) if h10_raw else {}
-        sign_10 = h10_json.get("HouseBhavaChalitSign", {}).get("Name", "Aries")
+        sign_10 = h10_json.get("HouseBhavaChalitSign", {}).get("Name", "Cancer")
     except Exception as e:
         st.error(f"Astrological Engine Error: {e}")
-        calculated_lagna, calculated_janma_rashi, planets_in_7, sign_10 = "Aries", "Tula (Libra)", [], "Aries"
+        calculated_lagna, calculated_janma_rashi, planets_in_7, sign_10 = "Libra (Tula)", "Tula (Libra)", [], "Cancer"
         calculated_naam_rashi = calculate_naam_rashi(st.session_state.user_name)
 
     # ==========================================
@@ -231,13 +231,13 @@ else:
             
         c_col1, c_col2 = st.columns(2)
         with c_col1:
-            st.info("### 🏢 Optimal Professional Industries")
+            st.info("### 🏢 Your Custom Job Industry")
             st.write(f"Based on your dynamic 10th House alignment (**{sign_10}**), your wealth-generation vectors point heavily toward: **{industry}**")
         with c_col2:
             st.warning("### ⏳ Asset Acquisition Timelines")
             st.markdown("""
             *   **Wealth Optimization Peak:** Your financial stabilizing phase initiates heavily between **Ages 29 and 33**.
-            *   **Fixed Assets (Property/Housing):** Heavy indicators point toward independent property acquisition or fixed family investments settling between **Ages 32 to 36**.
+            *   **Housing & Property Acquisition Milestone:** Heavy indicators point toward independent property acquisition or fixed family investments settling between **Ages 32 to 36**.
             """)
 
     # ==========================================
