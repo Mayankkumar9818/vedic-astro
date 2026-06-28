@@ -11,7 +11,7 @@ except Exception as e:
     st.error(f"Failed to initialize VedAstro Engine: {e}")
 
 # Page Layout Configuration
-st.set_page_config(page_title="My Personal Vedic Dashboard", layout="wide")
+st.set_page_config(page_title="Premium Vedic Astrology System", layout="wide")
 st.title("🔮 Your Digital Pandit: Premium Vedic Astrology System")
 st.markdown("An advanced, dynamic astrological companion translating complex natal planetary configurations into personalized analysis.")
 
@@ -19,13 +19,14 @@ st.markdown("An advanced, dynamic astrological companion translating complex nat
 MIN_DATE = datetime.date(1900, 1, 1)
 MAX_DATE = datetime.date(2026, 12, 31)
 
-# Initialize Streamlit Session State Memory Keys to prevent tab-switching bugs
+# Initialize Streamlit Session State Memory Keys
 if 'user_name' not in st.session_state: st.session_state.user_name = "Mayank Kumar"
 if 'location_input' not in st.session_state: st.session_state.location_input = "New Delhi"
 if 'date_input' not in st.session_state: st.session_state.date_input = datetime.date(1992, 10, 25)
 if 'sb_hr' not in st.session_state: st.session_state.sb_hr = 2
 if 'sb_min' not in st.session_state: st.session_state.sb_min = "30"
 if 'sb_period' not in st.session_state: st.session_state.sb_period = "PM"
+if 'form_submitted' not in st.session_state: st.session_state.form_submitted = False
 
 # Robust helper function to safely obtain a valid VedAstro GeoLocation object 
 def get_safe_geolocation(city_name):
@@ -69,192 +70,223 @@ def calculate_naam_rashi(name):
     }
     for rashi, syllables in rashi_mapping.items():
         if first_char in syllables: return rashi
-    return "Simha (Leo)"
-
+    return "Mesh (Aries)"
 
 # ==========================================================
-# MAIN PAGE INPUT MATRIX (Unified at the Top)
+# MAIN PAGE INPUT MATRIX (Wrapped inside a Secure Form)
 # ==========================================================
-st.markdown("### 🗺️ Enter Master Birth Parameters / मुख्य जन्म विवरण")
-with st.container():
+st.markdown("### 🗺️ Enter Birth Details & Click Generate / जन्म विवरण भरें")
+
+with st.form("birth_details_form"):
     col1, col2, col3 = st.columns(3)
     with col1:
-        u_name = st.text_input("Your Name / आपका नाम", value=st.session_state.user_name, key="input_name")
-        st.session_state.user_name = u_name
+        u_name = st.text_input("Your Name / आपका नाम", value=st.session_state.user_name)
     with col2:
-        l_input = st.text_input("Birth City / जन्म स्थान", value=st.session_state.location_input, key="input_city")
-        st.session_state.location_input = l_input
+        l_input = st.text_input("Birth City / जन्म स्थान", value=st.session_state.location_input)
     with col3:
-        d_input = st.date_input("Birth Date / जन्म तिथि", value=st.session_state.date_input, min_value=MIN_DATE, max_value=MAX_DATE, key="input_date")
-        st.session_state.date_input = d_input
+        d_input = st.date_input("Birth Date / जन्म तिथि", value=st.session_state.date_input, min_value=MIN_DATE, max_value=MAX_DATE)
 
-    # Clean time selector matrix layout below the primary inputs
     st.markdown("**Birth Time Selector / जन्म का समय**")
     t_col1, t_col2, t_col3 = st.columns(3)
     with t_col1:
-        hr_selection = t_col1.selectbox("Hr", list(range(1, 13)), index=st.session_state.sb_hr - 1, key="input_hr")
-        st.session_state.sb_hr = hr_selection
+        hr_selection = t_col1.selectbox("Hour", list(range(1, 13)), index=st.session_state.sb_hr - 1)
     with t_col2:
         minutes_list = [f"{i:02d}" for i in range(60)]
         default_min_idx = minutes_list.index(st.session_state.sb_min) if st.session_state.sb_min in minutes_list else 30
-        min_selection = t_col2.selectbox("Min", minutes_list, index=default_min_idx, key="input_min")
-        st.session_state.sb_min = min_selection
+        min_selection = t_col2.selectbox("Minute", minutes_list, index=default_min_idx)
     with t_col3:
         period_idx = 0 if st.session_state.sb_period == "AM" else 1
-        period_selection = t_col3.selectbox("AM/PM", ["AM", "PM"], index=period_idx, key="input_period")
+        period_selection = t_col3.selectbox("AM/PM", ["AM", "PM"], index=period_idx)
+
+    # THE MASTER GENERATE BUTTON
+    submit_button = st.form_submit_button("🔮 Generate Horoscope Calculations / कुंडली बनाएं")
+    
+    if submit_button:
+        st.session_state.user_name = u_name
+        st.session_state.location_input = l_input
+        st.session_state.date_input = d_input
+        st.session_state.sb_hr = hr_selection
+        st.session_state.sb_min = min_selection
         st.session_state.sb_period = period_selection
+        st.session_state.form_submitted = True
 
-# Process hour transformation into 24-hour astronomical standard
-hour_24 = int(st.session_state.sb_hr)
-if st.session_state.sb_period == "PM" and hour_24 < 12: hour_24 += 12
-elif st.session_state.sb_period == "AM" and hour_24 == 12: hour_24 = 0
-master_time = datetime.time(hour_24, int(st.session_state.sb_min))
+# Process calculations if form is submitted
+birth_time = None
+if st.session_state.form_submitted:
+    hour_24 = int(st.session_state.sb_hr)
+    if st.session_state.sb_period == "PM" and hour_24 < 12: hour_24 += 12
+    elif st.session_state.sb_period == "AM" and hour_24 == 12: hour_24 = 0
+    master_time = datetime.time(hour_24, int(st.session_state.sb_min))
 
-# Generate the background astronomical calculation vectors 
-try:
-    master_loc = get_safe_geolocation(st.session_state.location_input)
-    master_time_str = f"{master_time.strftime('%H:%M')} {st.session_state.date_input.strftime('%d/%m/%Y')} +05:30"
-    birth_time = Time(master_time_str, master_loc)
-except Exception:
-    birth_time = None
+    try:
+        master_loc = get_safe_geolocation(st.session_state.location_input)
+        master_time_str = f"{master_time.strftime('%H:%M')} {st.session_state.date_input.strftime('%d/%m/%Y')} +05:30"
+        birth_time = Time(master_time_str, master_loc)
+    except Exception:
+        st.error("Error setting astronomical time coordinates.")
 
 st.markdown("---")
 
-# Unified Dashboard Navigation Tabs
+# Navigation Tabs
 tab1, tab2, tab3, tab4 = st.tabs([
-    "🔮 Personal Chart & Soul Analysis", 
-    "💑 Relationship Compatibility & Marriage Timing", 
-    "💼 Professional Career & Asset Blueprints",
-    "📅 Major Planetary Transits & Timeline"
+    "🔮 Birth Signs & Soul Analysis", 
+    "💑 Marriage Timing & Compatibility", 
+    "💼 Profession & Asset Blueprints",
+    "📅 Planetary Transits (Shani, Rahu, Ketu)"
 ])
 
-# ==========================================
-# TAB 1: KUNDLI, LAGNA, & NAAM RASHI
-# ==========================================
-with tab1:
-    st.header("✨ Personal Birth Chart Blueprint / जन्म कुंडली विश्लेषण")
-    
-    if birth_time:
-        try:
-            all_house_data = Calculate.AllHouseData(HouseName.House1, birth_time)
-            house_json = json.loads(Tools.AnyToJSON("", all_house_data)) if all_house_data else {}
-            calculated_house_sign = house_json.get("HouseBhavaChalitSign", {}).get("Name", "Libra (Tula)") if isinstance(house_json, dict) else "Libra (Tula)"
-            calculated_naam_rashi = calculate_naam_rashi(st.session_state.user_name)
-            
-            c1, c2, c3 = st.columns(3)
-            with c1: st.metric(label="🔮 Your Lagna (Rising Ascendant)", value=calculated_house_sign)
-            with c2: st.metric(label="🌙 Janma Rashi (Birth Moon Sign)", value="Libra (Tula)")
-            with c3: st.metric(label="🔤 Naam Rashi (Name Signature Sign)", value=calculated_naam_rashi)
-            
-            st.markdown("---")
-            st.subheader("📚 Astrological Fundamentals / ज्योतिषीय आधार")
-            e_col, h_col = st.columns(2)
-            with e_col:
-                st.markdown(f"> **Naam Rashi vs Janma Rashi:** For names starting with characters like '{st.session_state.user_name[:1]}', your Naam Rashi defaults to **{calculated_naam_rashi}**. It reflects your external social identity, whereas Janma Rashi reflects the deep subconscious mind.")
-            with h_col:
-                st.markdown(f"> **नाम राशि बनाम जन्म राशि:** आपके नाम के पहले अक्षर के आधार पर आपकी नाम राशि **{calculated_naam_rashi}** है। यह बाहरी व्यक्तित्व को दर्शाती है, जबकि जन्म राशि आंतरिक मन को चलाती है।")
-        except Exception as e:
-            st.error(f"Engine parsing error: {e}")
+if not st.session_state.form_submitted:
+    st.info("👋 Please fill in your birth details above and click 'Generate Horoscope Calculations' to initialize your breakdown.")
+else:
+    # Gather structural parameters upfront to provide real, raw final results
+    try:
+        # Dynamic calculation of Lagna and Janma Rashi (Moon Sign)
+        h1_raw = Calculate.AllHouseData(HouseName.House1, birth_time)
+        h1_json = json.loads(Tools.AnyToJSON("", h1_raw)) if h1_raw else {}
+        calculated_lagna = h1_json.get("HouseBhavaChalitSign", {}).get("Name", "Aries")
+        
+        # Pulling true dynamic Moon Sign
+        moon_sign_raw = Calculate.MoonSign(birth_time)
+        calculated_janma_rashi = str(moon_sign_raw).strip() if moon_sign_raw else "Tula (Libra)"
+        calculated_naam_rashi = calculate_naam_rashi(st.session_state.user_name)
+        
+        # 7th House Processing for Marriage
+        h7_raw = Calculate.AllHouseData(HouseName.House7, birth_time)
+        h7_json = json.loads(Tools.AnyToJSON("", h7_raw)) if h7_raw else {}
+        planets_in_7 = h7_json.get("PlanetsInHouseBasedOnSign", []) if isinstance(h7_json, dict) else []
+        
+        # 10th House Processing for Career
+        h10_raw = Calculate.AllHouseData(HouseName.House10, birth_time)
+        h10_json = json.loads(Tools.AnyToJSON("", h10_raw)) if h10_raw else {}
+        sign_10 = h10_json.get("HouseBhavaChalitSign", {}).get("Name", "Aries")
+    except Exception as e:
+        st.error(f"Astrological Engine Error: {e}")
+        calculated_lagna, calculated_janma_rashi, planets_in_7, sign_10 = "Aries", "Tula (Libra)", [], "Aries"
+        calculated_naam_rashi = calculate_naam_rashi(st.session_state.user_name)
 
-# ==========================================
-# TAB 2: MARRIAGE COMPATIBILITY & DYNAMIC AGE TIMING
-# ==========================================
-with tab2:
-    st.header("💑 Marriage Alignment & Personalized Timing / विवाह योग एवं सटीक समय")
-    st.markdown("Calculates **customized age windows** by evaluating planetary profiles in your 7th House.")
-    
-    if birth_time:
-        try:
-            h7_raw = Calculate.AllHouseData(HouseName.House7, birth_time)
-            h7_json = json.loads(Tools.AnyToJSON("", h7_raw)) if h7_raw else {}
-            planets_in_7 = h7_json.get("PlanetsInHouseBasedOnSign", []) if isinstance(h7_json, dict) else []
-            
-            is_delayed = any(p in ["Saturn", "Rahu", "Ketu", "Shani"] for p in planets_in_7)
-            
-            if is_delayed:
-                age_window = "30 to 34 Years (परिपक्व आयु योग)"
-                verdict_eng = "Your 7th House demonstrates strong structural signatures from planets like Saturn or Rahu. This creates a Mature Marriage Yog, where long-term stability settles beautifully in your early 30s."
-                verdict_hin = "आपके सप्तम भाव पर धीमे या अनुशासित ग्रहों (जैसे शनि या राहु) का प्रभाव है। यह एक परिपक्व विवाह योग बनाता है, जो 30 से 34 वर्ष की आयु में स्थायी जुड़ाव देगा।"
-            else:
-                age_window = "25 to 29 Years (सामान्य/शीघ्र विवाह योग)"
-                verdict_eng = "Your 7th House enjoys beneficial paths. This triggers a standard union timeline, peaking gracefully in your mid-to-late 20s with an affectionate connection."
-                verdict_hin = "आपके सप्तम भाव पर शुभ ग्रहों का सकारात्मक प्रभाव है। आपकी कुंडली के अनुसार विवाह सामान्य समय सीमा (25 से 29 वर्ष) के भीतर होने के प्रबल योग हैं।"
+    # ==========================================
+    # TAB 1: BOTH RASHIS & ASCENDANT
+    # ==========================================
+    with tab1:
+        st.header("✨ Your Identity Blueprint: Both Rashis & Lagna")
+        
+        c1, c2, c3 = st.columns(3)
+        with c1: st.metric(label="🔮 Your Lagna (Rising Ascendant)", value=calculated_lagna)
+        with c2: st.metric(label="🌙 Janma Rashi (True Birth Moon Sign)", value=calculated_janma_rashi)
+        with c3: st.metric(label="🔤 Naam Rashi (Name Syllable Sign)", value=calculated_naam_rashi)
+        
+        st.markdown("---")
+        st.subheader("📚 Detailed Duality Breakdown")
+        st.markdown(f"""
+        *   **Janma Rashi ({calculated_janma_rashi}):** This is calculated strictly from your exact Date, Time, and Place of birth. It rules your subconscious mind, emotional stability, and dictates your active planetary dasha cycles and gochar (transits). **This is the core foundation for accurate predictions.**
+        *   **Naam Rashi ({calculated_naam_rashi}):** Calculated from the first letter of your name (**{st.session_state.user_name[:1].upper()}**). This dictates how the public perceives you and operates when your exact birth chart details are unavailable.
+        """)
 
-            res1, res2 = st.columns(2)
-            with res1: st.metric(label="🎯 Personalized Marriage Age Window", value=age_window)
-            with res2: st.metric(label="🪐 Active Planetary Yog Type", value="Structured / Mature" if is_delayed else "Auspicious / Standard")
+    # ==========================================
+    # TAB 2: UNFILTERED MARRIAGE TIMING
+    # ==========================================
+    with tab2:
+        st.header("💑 Marriage Alignment & Unfiltered Age Windows")
+        
+        # Determine strict structural alignment based on planetary placements
+        has_malefic = any(p in ["Saturn", "Rahu", "Ketu", "Mars", "Shani", "Mangal"] for p in planets_in_7)
+        has_benefic = any(p in ["Jupiter", "Venus", "Guru", "Shukra"] for p in planets_in_7)
+        
+        if has_malefic:
+            age_window = "30 to 34 Years (Delayed / Mature Bond)"
+            severity = "Heavy planetary configurations (such as Saturnian or Nodal influences) indicate lessons in patience. Marriage prior to age 28 could bring communication stress or legal friction. True stability manifests after maturity."
+            verdict_status = "Negative/Challenging initially, turning highly stable after age 30."
+        elif has_benefic:
+            age_window = "24 to 28 Years (Auspicious / Early Union)"
+            severity = "Beneficent energy profiles dominate. Indicates an emotionally supportive partner, timely alignment, and domestic growth shortly after starting a career."
+            verdict_status = "Positive and harmonious."
+        else:
+            age_window = "27 to 29 Years (Standard Karmic Lifecycle)"
+            severity = "No severe afflictions or heavy accelerations are noticed in the 7th house cusp. Marriage occurs at a standard psychological and societal age window."
+            verdict_status = "Neutral and stable."
+
+        m_col1, m_col2 = st.columns(2)
+        with m_col1: st.metric(label="🎯 Predicted Marriage Age Window", value=age_window)
+        with m_col2: st.metric(label="🪐 Structural Condition", value=verdict_status)
+        
+        st.markdown(f"""
+        ### 📊 Unfiltered Relationship Analysis
+        *   **Plated Configurations Found:** `{planets_in_7 if planets_in_7 else 'None Directly Occupying'}`
+        *   **The Reality Check:** {severity}
+        """)
+
+    # ==========================================
+    # TAB 3: CAREER & ASSET BLUEPRINTS
+    # ==========================================
+    with tab3:
+        st.header("💼 Profession, Financial Security & Asset Blueprints")
+        
+        # Direct conditional logic for Career Mapping
+        if any(x in sign_10 for x in ["Cancer", "Scorpio", "Pisces", "Moon", "Mars"]):
+            industry = "Public Administration, Healthcare, Strategic Logistics, or Technical Engineering."
+        elif any(x in sign_10 for x in ["Aries", "Leo", "Sagittarius", "Sun", "Jupiter"]):
+            industry = "Corporate Executive Leadership, Government Contracting, Legal counsel, or Enterprise Management."
+        else:
+            industry = "Tech Sector Analytics, Fintech Advisory, Design Architecture, or Mass Media Consulting."
             
-            elan_col, hlan_col = st.columns(2)
-            with elan_col: st.markdown(f"### 🇬🇧 English Analysis\n> {verdict_eng}")
-            with hlan_col: st.markdown(f"### 🇮🇳 हिंदी विश्लेषण\n> {verdict_hin}")
-        except Exception as e:
-            st.error(f"Error computing marriage parameters: {e}")
+        c_col1, c_col2 = st.columns(2)
+        with c_col1:
+            st.info("### 🏢 Optimal Professional Industries")
+            st.write(f"Based on your dynamic 10th House alignment (**{sign_10}**), your wealth-generation vectors point heavily toward: **{industry}**")
+        with c_col2:
+            st.warning("### ⏳ Asset Acquisition Timelines")
+            st.markdown("""
+            *   **Wealth Optimization Peak:** Your financial stabilizing phase initiates heavily between **Ages 29 and 33**.
+            *   **Fixed Assets (Property/Housing):** Heavy indicators point toward independent property acquisition or fixed family investments settling between **Ages 32 to 36**.
+            """)
 
-# ==========================================
-# TAB 3: CUSTOM CAREER FIELDS, TIMING & PROPERTY
-# ==========================================
-with tab3:
-    st.header("💼 Material Destiny, Career Fields & Timing Blueprints / करियर क्षेत्र और सटीक समय")
-    st.markdown("Extracting custom career field directives and asset-building ages via your **10th House (Profession)**.")
-    
-    if birth_time:
-        try:
-            h10_raw = Calculate.AllHouseData(HouseName.House10, birth_time)
-            h10_json = json.loads(Tools.AnyToJSON("", h10_raw)) if h10_raw else {}
-            sign_10 = h10_json.get("HouseBhavaChalitSign", {}).get("Name", "Cancer") if isinstance(h10_json, dict) else "Cancer"
+    # ==========================================
+    # TAB 4: SHANI, RAHU, & KETU TRANSIT TRACKER
+    # ==========================================
+    with tab4:
+        st.header("📅 Shani, Rahu, & Ketu Transit Blueprint")
+        st.markdown(f"The transit engine has automatically locked onto your calculated **Janma Rashi ({calculated_janma_rashi})**.")
+
+        # Real-time transit impacts for 2026 based on Rashi signatures
+        if "Tula" in calculated_janma_rashi or "Libra" in calculated_janma_rashi:
+            shani_window = "Saturn in Aries (7th from Moon) / Testing phase for relationships."
+            rahu_window = "Rahu in Aquarius (5th from Moon) / Sudden unconventional gains or analytical pivots."
+            ketu_window = "Ketu in Leo (11th from Moon) / Re-evaluating large social networks and friend circles."
+            verdict_t = "Demands strict discipline in contractual agreements and partnerships. Do not cut corners."
+        elif "Mesh" in calculated_janma_rashi or "Aries" in calculated_janma_rashi:
+            shani_window = "Saturn in Aries (Sade Sati/Janma Shani) / High workload, physical fatigue."
+            rahu_window = "Rahu in Aquarius (11th from Moon) / Huge financial windfalls, sudden international exposure."
+            ketu_window = "Ketu in Leo (5th from Moon) / Deep spiritual inclination, gut-health vulnerabilities."
+            verdict_t = "A massive transformation year. High performance is rewarded, but physical burnout risks are real."
+        else:
+            shani_window = "Saturn moving through active structural houses relative to your Moon."
+            rahu_window = "Rahu processing major nodal adjustments."
+            ketu_window = "Ketu operating on the reciprocal axis."
+            verdict_t = "Standard operational transits apply. Focus on disciplined lifestyle routines and daily metrics."
+
+        transit_df = pd.DataFrame({
+            "Shadow/Karmic Planet": ["🪐 Shani (Saturn)", "🎭 Rahu (North Node)", "🔱 Ketu (South Node)"],
+            "Transit Space Allocation": [shani_window, rahu_window, ketu_window],
+            "Raw Actionable Guidance": [verdict_t, "Expect unexpected psychological urges; ground them with data.", "Isolate noise; focus purely on inner execution."]
+        }).set_index("Shadow/Karmic Planet")
+        
+        st.table(transit_df)
+
+    # ==========================================
+    # UNFILTERED FINAL VERDICT SUMMARY
+    # ==========================================
+    st.markdown("### 🎯 Unfiltered Karmic Final Verdict")
+    with st.expander("See Raw Astrological Summary (Good or Bad)", expanded=True):
+        st.markdown("#### **The Bottom Line**")
+        if has_malefic:
+            st.error("""
+            ⚠️ **Critical Challenge Points:** Your chart contains lessons regarding structural delay (Saturn/Rahu presence). You will experience hurdles or resistance early in life regarding relationships or quick asset accumulation. Attempts to rush these milestones will result in setbacks. 
             
-            if "Cancer" in sign_10 or "Moon" in sign_10:
-                field_rec = "Public administration, hospitality, counseling, or creative management fields."
-            elif "Leo" in sign_10 or "Sun" in sign_10:
-                field_rec = "Government roles, administrative leadership, software contracting, or corporate steering."
-            else:
-                field_rec = "Commerce, corporate financial advisory, legal consultation, design engineering, or tech sector analytics."
+            🚀 **The Silver Lining:** Your long-term stability after Age 30 is significantly higher and structurally more secure than most. True success comes through patience and slow compounding.
+            """)
+        else:
+            st.success("""
+            ✅ **Core Strength Points:** Your chart points toward clean, unblocked energy paths for foundational milestones. Career advancement and social identity development experience steady, fluid progression without abrupt catastrophic downfalls.
             
-            c_field, c_time = st.columns(2)
-            with c_field:
-                st.info("### 🏢 Your Custom Job Industry")
-                st.write(f"Based on your calculated 10th House Sign (**{sign_10}**), your optimal career fields are: **{field_rec}**")
-            with c_time:
-                st.warning("### ⏳ Financial & Job Security Ages")
-                st.markdown("""
-                * **Job Placement Milestones:** Initial operational career triggers operate at **Ages 22-24**, optimizing into deep financial mastery near **Ages 29-33**.
-                * **Housing & Property Acquisition Milestone:** Physical fixed asset paths, land deals, or vehicle ownership indices settle heavily between **Ages 32 to 36**.
-                """)
-        except Exception as e:
-            st.error(f"Error checking house properties: {e}")
-
-# ==========================================
-# TAB 4: SHANI, RAHU, & KETU TRANSIT TRACKER
-# ==========================================
-with tab4:
-    st.header("📅 Shani, Rahu, & Ketu Transit Tracker / गोचर और राशि परिवर्तन समय")
-    st.markdown("Track exactly **when** the cosmic heavyweights change signs and how they will behave in your Rashi.")
-    
-    user_rashi = st.selectbox(
-        "Select Your Rashi for Transit Mapping / अपनी राशि चुनें",
-        ["Mesh (Aries)", "Vrishabha (Taurus)", "Mithun (Gemini)", "Kark (Cancer)", 
-         "Simha (Leo)", "Kanya (Virgo)", "Tula (Libra)", "Vrishchik (Scorpio)", 
-         "Dhanu (Sagittarius)", "Makar (Capricorn)", "Kumbha (Aquarius)", "Meen (Pisces)"],
-        index=6
-    )
-
-    if "Tula" in user_rashi or "Libra" in user_rashi:
-        shani_year = "Saturn moves into Aries / March 2025 – June 2027"
-        rahu_year = "Rahu moves into Aquarius / May 2025 – Dec 2026"
-        shani_effect = "Shani Dev demands absolute structural organization in partnerships. Avoid shortcut methods."
-        rahu_effect = "Rahu brings a massive surge of unique out-of-the-box ideas, software engineering innovations, or creative pivots."
-        ketu_effect = "Focus on clean, highly targeted spiritual networking circles."
-    else:
-        shani_year = "Active cycle ongoing through current celestial shifts."
-        rahu_year = "Moving through major nodal karmic axis resets."
-        shani_effect = "Demands intense daily discipline, hard work, and regular tracking of lifestyle goals."
-        rahu_effect = "Creates temporary desires for rapid professional expansion."
-        ketu_effect = "Prompts introspection, meditation, and a focus on inner spiritual growth."
-
-    transit_data = pd.DataFrame({
-        "Planet (ग्रह)": ["🪐 Shani (Saturn)", "🎭 Rahu (North Node)", "🔱 Ketu (South Node)"],
-        "Transit Timeline Window (परिवर्तन वर्ष)": [shani_year, rahu_year, "Opposite axis to Rahu (180 degrees)"],
-        "How It Will Behave / What To Do (प्रभाव और उपाय)": [shani_effect, rahu_effect, ketu_effect]
-    }).set_index("Planet (ग्रह)")
-    
-    st.table(transit_data)
+            ⚠️ **The Warning:** Do not mistake fluid progress for an excuse to coast. Laziness can squander favorable planet positions. Maintain active discipline.
+            """)
