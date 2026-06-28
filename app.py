@@ -11,7 +11,12 @@ try:
 except:
     pass
 
-# User Input
+st.title("🔮 Your Digital Pandit")
+
+# Use session state to keep the results on screen after clicking
+if 'results' not in st.session_state:
+    st.session_state.results = None
+
 with st.form("birth_data"):
     u_name = st.text_input("Name", "Mayank")
     city = st.text_input("City", "New Delhi")
@@ -19,34 +24,39 @@ with st.form("birth_data"):
     time_str = st.text_input("Time (HH:MM)", "14:30")
     submit = st.form_submit_button("Generate")
 
-if submit:
-    try:
-        # Setup Time/Location
-        geo = va.GeoLocation(city, 77.209, 28.613)
-        time_obj = va.Time(f"{time_str} {date.strftime('%d/%m/%Y')} +05:30", geo)
+    if submit:
+        try:
+            # Setup Time/Location
+            geo = va.GeoLocation(city, 77.209, 28.613)
+            time_obj = va.Time(f"{time_str} {date.strftime('%d/%m/%Y')} +05:30", geo)
 
-        # CORRECTED API CALLS based on your provided list:
-        # 1. Rising Sign
-        lagna = va.Calculate.LagnaSignName(time_obj)
-        
-        # 2. Moon Sign (Using PlanetZodiacSign as per verified method list)
-        moon_sign_obj = va.Calculate.PlanetZodiacSign(va.PlanetName.Moon, time_obj)
-        moon_sign = moon_sign_obj.ToString() # Converts the object to string
-        
-        # 3. Sun Sign
-        sun_sign_obj = va.Calculate.PlanetZodiacSign(va.PlanetName.Sun, time_obj)
-        sun_sign = sun_sign_obj.ToString()
+            # Calculation
+            lagna = str(va.Calculate.LagnaSignName(time_obj))
+            moon_sign = str(va.Calculate.PlanetZodiacSign(va.PlanetName.Moon, time_obj).ToString())
+            sun_sign = str(va.Calculate.PlanetZodiacSign(va.PlanetName.Sun, time_obj).ToString())
+            
+            # Store in session state
+            st.session_state.results = {
+                "lagna": lagna,
+                "moon": moon_sign,
+                "sun": sun_sign,
+                "name": u_name
+            }
+        except Exception as e:
+            st.session_state.results = {"error": str(e)}
 
-        # Display
-        st.success("Calculations Complete")
+# Display results if they exist in state
+if st.session_state.results:
+    res = st.session_state.results
+    if "error" in res:
+        st.error(f"Engine Error: {res['error']}")
+    else:
+        st.success("Calculations Complete!")
         col1, col2, col3 = st.columns(3)
-        col1.metric("Lagna", str(lagna))
-        col2.metric("Moon Sign", str(moon_sign))
-        col3.metric("Sun Sign", str(sun_sign))
+        col1.metric("Lagna", res["lagna"])
+        col2.metric("Moon Sign", res["moon"])
+        col3.metric("Sun Sign", res["sun"])
         
-        st.write(f"The analysis for {u_name} shows your rising sign is {lagna}, "
-                 f"your emotional landscape is governed by the Moon in {moon_sign}, "
-                 f"and your soul's expression is influenced by the Sun in {sun_sign}.")
-        
-    except Exception as e:
-        st.error(f"Engine Error: {str(e)}")
+        st.write(f"The analysis for {res['name']} shows your core identity is rooted in {res['lagna']}, "
+                 f"your emotional landscape is governed by the Moon in {res['moon']}, "
+                 f"and your soul's expression is influenced by the Sun in {res['sun']}.")
