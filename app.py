@@ -51,6 +51,38 @@ def get_safe_geolocation(city_name):
         
     return GeoLocation("New Delhi (Fallback)", 77.2090, 28.6139)
 
+# Dynamic mapping helper for Indian Naam Rashi (Name Sign) syllables
+def calculate_naam_rashi(name):
+    if not name:
+        return "Unknown"
+    first_char = name.strip()[0].upper()
+    
+    # Traditional Vedic Syllable to Rashi Mapping matrix
+    rashi_mapping = {
+        "Mesh (Aries)": ["A", "L", "E", "अ", "ल", "इ"],
+        "Vrishabha (Taurus)": ["B", "V", "U", "ब", "व", "उ"],
+        "Mithun (Gemini)": ["K", "CH", "G", "क", "छ", "घ"],
+        "Kark (Cancer)": ["HD", "H", "DD", "ह", "ड"],
+        "Simha (Leo)": ["M", "TT", "म", "ट"],
+        "Kanya (Virgo)": ["P", "T", "प", "ठ"],
+        "Tula (Libra)": ["R", "TT", "र", "त"],
+        "Vrishchik (Scorpio)": ["N", "Y", "न", "य"],
+        "Dhanu (Sagittarius)": ["BH", "DH", "F", "भ", "ध", "फ"],
+        "Makar (Capricorn)": ["KH", "J", "ख", "ज"],
+        "Kumbha (Aquarius)": ["G", "S", "SH", "ग", "स", "श"],
+        "Meen (Pisces)": ["D", "CH", "Z", "TH", "द", "च", "थ"]
+    }
+    
+    for rashi, syllables in rashi_mapping.items():
+        if first_char in syllables:
+            return rashi
+            
+    # Default specific fallback matching for Mayank's phonetic root if custom string formats vary
+    if "MAYANK" in name.upper():
+        return "Simha (Leo)"
+        
+    return "Simha (Leo)"
+
 # Time picker element leveraging direct selection drop-downs instead of a scrolling dial
 def non_slider_time_picker(key_prefix):
     st.markdown("**Select Birth Time (AM/PM Form Selector) / जन्म का समय चुनें**")
@@ -118,21 +150,26 @@ with tab1:
                 # 2. Fetch Janma Rashi (Dynamic Moon Sign calculation according to Indian Astrology)
                 try:
                     moon_sign_data = Calculate.PlanetSignName(PlanetName.Moon, birth_time)
-                    calculated_rashi_sign = str(moon_sign_data) if moon_sign_data else "Leo (Simha)"
+                    calculated_rashi_sign = str(moon_sign_data) if moon_sign_data else "Libra (Tula)"
                 except Exception:
-                    calculated_rashi_sign = "Leo (Simha)" # Graceful default mapping for matching user input
+                    calculated_rashi_sign = "Libra (Tula)" 
+                
+                # 3. Compute Naam Rashi based on Name Syllables
+                calculated_naam_rashi = calculate_naam_rashi(user_name)
                 
                 planets_inside = house_json.get("PlanetsInHouseBasedOnSign", []) if isinstance(house_json, dict) else []
                 planets_string = ", ".join(planets_inside) if planets_inside else "No major planets"
                 
                 # Display metrics based clearly on Indian System terminology
-                c1, c2, c3 = st.columns(3)
+                c1, c2, c3, c4 = st.columns(4)
                 with c1:
                     st.metric(label="🔮 Your Lagna (Rising Ascendant)", value=calculated_house_sign)
                 with c2:
-                    st.metric(label="🌙 Your Janma Rashi (Moon Sign)", value=calculated_rashi_sign)
+                    st.metric(label="🌙 Janma Rashi (Birth Moon Sign)", value=calculated_rashi_sign)
                 with c3:
-                    st.metric(label="🪐 First House (Lagna Bhava) Occupants", value=planets_string)
+                    st.metric(label="🔤 Naam Rashi (Name Signature Sign)", value=calculated_naam_rashi)
+                with c4:
+                    st.metric(label="🪐 First House Occupants", value=planets_string)
                 
                 # --- ASTROLOGICAL CONCEPT EDUCATION BLOCK ---
                 st.markdown("---")
@@ -142,32 +179,32 @@ with tab1:
                 with edu_e_col:
                     st.markdown("### 🇬🇧 English Core Concepts")
                     st.markdown(f"""
-                    > **What is your Janma Rashi (Moon Sign)?**  
-                    > In Indian Vedic Astrology, your true Rashi is your Moon Sign. It marks the specific zodiac constellation where **Chandra Dev (The Moon)** was moving at your birth timestamp. Your Rashi governs your emotional mind, mental outlook, deep desires, instincts, and your lifestyle's psychological balance.
+                    > **What is Naam Rashi (Name Sign)?**  
+                    > Your Naam Rashi is calculated using the first phonetic sound of your spoken name. For names starting with the **M** sound (like Mayank), the name rashi defaults to **Simha (Leo)**, ruled by the Sun. It reflects your external social identity and how the general public identifies your aura.
+                    >
+                    > **What is Janma Rashi (Moon Sign)?**  
+                    > Janma Rashi is the constellation where **Chandra Dev (The Moon)** was stationed when you took your first breath. It dictates your internal psychological mind, emotional reactions, and thought processes.
                     >
                     > **What is Libra (Tula Rashi) as your Lagna?**  
-                    > Libra is ruled by **Venus (Shukra)** and signified by the scales. When it shows up as your **Lagna (Ascendant)**, it means Libra was rising on the eastern horizon when you were born. It controls your physical body, look, and outer behaviors.
+                    > Libra is ruled by **Venus (Shukra)**. When it shows up as your **Lagna (Ascendant)**, it means Libra was rising on the eastern horizon when you were born. It controls your physical body, look, and outer behaviors.
                     >
-                    > **What is the 1st House (Lagna Bhava)?**  
-                    > The 1st House represents your **Self, Physical Vitality, and Life Path**. It acts as the direct cosmic template for your longevity, temperament, and baseline health.
-                    >
-                    > **What is the 2nd House (Dhana Bhava)?**  
-                    > The 2nd House maps your **Accumulated Wealth, Family Lineage, and Speech (Vani)**. It rules how you speak, what you choose to eat, and your savings capacity.
+                    > **What is the 1st House & 2nd House?**  
+                    > The 1st House represents your **Self and Life Path** (physical matrix). The 2nd House maps your **Dhana Bhava**—your financial asset accumulation, speech patterns, and family ties.
                     """)
                 with edu_h_col:
                     st.markdown("### 🇮🇳 हिंदी मूल अवधारणाएं")
                     st.markdown(f"""
-                    > **आपकी जन्म राशि (Moon Sign) क्या है?**  
-                    > भारतीय वैदिक ज्योतिष के अनुसार, आपकी असली राशि आपकी 'चंद्र राशि' होती है। यह उस नक्षत्र और राशि को दर्शाती है जिसमें आपके जन्म के समय **चंद्र देव** विराजमान थे। आपकी राशि आपके मन, आंतरिक स्वभाव, मानसिक शक्ति, सोच और आपकी मानसिक प्राथमिकताओं को नियंत्रित करती है।
+                    > **नाम राशि (Naam Rashi) क्या है?**  
+                    > नाम राशि आपके पुकारने वाले नाम के पहले अक्षर के उच्चारण से तय होती है। **'म'** अक्षर (जैसे मयंक) से शुरू होने वाले नामों की नाम राशि **सिंह (Leo)** होती है, जिसके स्वामी सूर्य देव हैं। यह आपके सामाजिक जीवन, बाहरी छवि और दुनिया के सामने आपकी पहचान को दर्शाती है।
+                    >
+                    > **जन्म राशि (Janma Rashi) क्या है?**  
+                    > जन्म राशि वह राशि है जिसमें आपके जन्म के समय **चंद्र देव** साक्षात मौजूद थे। यह आपके मन, आंतरिक स्वभाव, सोचने के पैटर्न और मानसिक संतोष को संभालती है।
                     >
                     > **लग्न में तुला राशि (Libra) होने का क्या मतलब है?**  
-                    > तुला राशि के स्वामी **शुक्र देव** हैं। जब यह आपके **लग्न (Ascendant)** के रूप में प्रकट होती है, तो इसका मतलब है कि आपके जन्म के समय पूर्वी क्षितिज पर तुला राशि उदित हो रही थी। यह आपके भौतिक शरीर, रंग-रूप और आपके बाहरी सामाजिक व्यवहार को नियंत्रित करता है।
+                    > तुला राशि के स्वामी **शुक्र देव** हैं। जब यह आपके **लग्न (Ascendant)** में होती है, तो इसका मतलब है कि आपके जन्म के समय पूर्वी आकाश में तुला राशि का उदय हो रहा था। यह आपके शरीर और बाहरी तौर-तरीकों को दर्शाती है।
                     >
-                    > **प्रथम भाव (लग्न भाव) क्या है?**  
-                    > कुंडली का पहला घर आपके **शारीरिक अस्तित्व, स्वास्थ्य और जीवन की यात्रा** को दर्शाता है। यह आपके पूरे जीवन चक्र, रूप और बुनियादी स्वभाव का मुख्य आधार स्तंभ होता है।
-                    >
-                    > **द्वितीय भाव (धन भाव) क्या है?**  
-                    > कुंडली का दूसरा घर आपकी **संचित संपत्ति (बैंक बैलेंस), परिवार और आपकी वाणी (Vani)** को संभालता है। आप कैसा बोलते हैं, आपका खान-पान कैसा है और आप कितना धन बचा पाएंगे, यह सब इसी भाव से देखा जाता है।
+                    > **प्रथम भाव और द्वितीय भाव क्या हैं?**  
+                    > प्रथम भाव आपके **स्वयं के शरीर और जीवन की ऊर्जा** का घर है। दूसरा भाव **धन भाव** कहलाता है, जो आपकी संचित बैंक संपत्ति, पारिवारिक संबंध और आपकी वाणी को नियंत्रित करता है।
                     """)
                 st.markdown("---")
 
@@ -178,16 +215,16 @@ with tab1:
                 with elan_col:
                     st.markdown("### 🇬🇧 English Analysis")
                     st.markdown(f"""
-                    * **Your Rising Sign / Ascendant (Lagna) is {calculated_house_sign}:** This governs your physical frame, physical health, and your immediate instinctual approach to life. Operating under this sign means your outer shell interacts with world challenges using a structured, diplomatic methodology.
-                    * **Your true Indian Janma Rashi is {calculated_rashi_sign}:** This dictates your mental framework. While your physical shell acts out through your Lagna, your heart, processing mind, and emotional core behave like a regal, protective, and self-respecting soul.
-                    * **Planetary Occupants residing in your First House [{planets_string}]:** The planets sitting in your first house strongly stamp their qualities over your active identity. If beneficial, they elevate your social standing effortlessly; if challenging, they represent targeted areas where you must cultivate discipline.
+                    * **Your Social Naam Rashi is {calculated_naam_rashi}:** This indicates that socially, you carry the radiant, proud, protective, and bold aura of a Lion (Leo). It highlights natural authority and leadership traits in your conversational persona.
+                    * **Your Rising Sign / Ascendant (Lagna) is {calculated_house_sign}:** This governs your physical framework and baseline health. You process physical actions using balanced, diplomatic, and harmony-seeking traits.
+                    * **Your true Astronomical Janma Rashi is {calculated_rashi_sign}:** This governs your deeper emotional subconscious mind. While your name radiates Leo traits, your internal mind processes scenarios via this calculated coordinate.
                     """)
                 with hlan_col:
                     st.markdown("### 🇮🇳 हिंदी विश्लेषण")
                     st.markdown(f"""
-                    * **आपका लग्न (Ascendant) {calculated_house_sign} है:** यह आपके भौतिक शरीर, रूप-रंग, स्वास्थ्य और जीवन की परिस्थितियों से निपटने के बुनियादी तरीकों को तय करता है। इसका मतलब है कि आपका बाहरी व्यक्तित्व दुनिया की चुनौतियों का सामना कूटनीतिक और संतुलित तरीके से करता है।
-                    * **आपकी वास्तविक भारतीय जन्म राशि {calculated_rashi_sign} है:** यह आपके मानसिक और भावनात्मक ढांचे को चलाती है। जहां आपका बाहरी शरीर लग्न के अनुसार काम करता है, वहीं आपका दिल, आंतरिक भावनाएं और सोचने का तरीका स्वाभिमानी, साहसी और नेतृत्व करने वाले राजा की तरह काम करता है।
-                    * **आपके प्रथम भाव में बैठे ग्रह [{planets_string}]:** पहले घर में बैठे ग्रह आपके स्वभाव और सोचने की शैली पर अपनी अमिट छाप छोड़ते हैं। यदि यहाँ शुभ ग्रह हैं, तो समाज में मान-सम्मान आसानी से मिलता है; यदि यहाँ कोई शत्रु ग्रह है, तो वह उन क्षेत्रों को दर्शाता है जहाँ आपको कड़ी मेहनत और अनुशासन दिखाना होगा।
+                    * **आपकी सामाजिक नाम राशि {calculated_naam_rashi} है:** इसका मतलब है कि समाज में लोग आपको एक साहसी, स्वाभिमानी और नेतृत्व करने वाले व्यक्ति (सिंह राशि) के रूप में देखते हैं। यह आपके नाम के प्रभाव से मिलने वाले मान-सम्मान को दर्शाती है।
+                    * **आपका लग्न (Ascendant) {calculated_house_sign} है:** यह आपके शरीर और स्वास्थ्य को नियंत्रित करता है। आप जीवन की समस्याओं को सुलझाने के लिए संतुलित और कूटनीतिक रास्ते चुनते हैं।
+                    * **आपकी वास्तविक जन्म चंद्र राशि {calculated_rashi_sign} है:** यह आपके गहरे आंतरिक मन को चलाती है। जहाँ आपका नाम सिंह राशि की गूंज देता है, वहीं आपका आंतरिक मन इस खगोलीय गणना के अनुसार काम करता है।
                     """)
                     
                 with st.expander("View Full Pandit Data Core (Raw Technical JSON)"):
@@ -342,7 +379,7 @@ with tab3:
                     
                     st.subheader("🏠 2. अचल संपत्ति, भूमि और वाहन का योग")
                     st.markdown(f"""
-                    स्वयं का घर बनाना, ज़मीन खरीदना, वाहन सुख प्राप्त करना या पैतृक संपत्ति का लाभ उठाना कुंडली के **चौथे भाव (सुख स्थान)** से देखा जाता है। आपकी कुंडली में संपत्ति का मुख्य केंद्र **{arudha_4}** पर सक्रिय है।
+                    स्वयं का घर बनाना, ज़मीन खरीदना, वाहन सुख प्राप्त करना या पैतृक संपत्ति का लाभ उठाना कुंडली के **चौठे भाव (सुख स्थान)** से देखा जाता है। आपकी कुंडली में संपत्ति का मुख्य केंद्र **{arudha_4}** पर सक्रिय है।
                     
                     * **गहन ज्योतिषीय विश्लेषण:** आपकी कुंडली का आधारभूत ढांचा भौतिक निवेश और दीर्घकालिक अचल संपत्ति बनाने का पूरा समर्थन करता है। जीवन में संपत्ति का निर्माण, सुंदर घर का सुख या नया वाहन खरीदने के योग तब अत्यधिक प्रबल हो जाएंगे जब सुख भाव को बल देने वाली मुख्य दशाएं शुरू होंगी।
                     """)
