@@ -35,7 +35,7 @@ def get_safe_geolocation(city_name):
     if clean_name in city_defaults:
         lon, lat = city_defaults[clean_name]
         return va.GeoLocation(city_name, lon, lat)
-    return va.GeoLocation("New Delhi (Fallback)", 77.2090, 28.6139)
+    return va.GeoLocation("New Delhi", 77.2090, 28.6139)
 
 # Dynamic mapping helper for Indian Naam Rashi (Name Sign) syllables
 def calculate_naam_rashi(name):
@@ -113,7 +113,9 @@ if st.session_state.form_submitted:
         
         birth_time = va.Time(master_time_str, master_loc)
         
-        clean_city_url = urllib.parse.quote(master_loc.Name)
+        # FIXED: Removed master_loc.Name attribute access. 
+        # Directly use the clean string text variable 'l_input' from state input to bypass .NET class field parsing errors.
+        clean_city_url = urllib.parse.quote(st.session_state.location_input.strip())
         iframe_url = f"https://api.vedastro.org/Calculate/CustomChart/Location/{clean_city_url}/Time/{time_str}/{date_str}/+05:30/Style/NorthIndian"
         
     except Exception as e:
@@ -132,15 +134,12 @@ tab1, tab2, tab3, tab4 = st.tabs([
 if not st.session_state.form_submitted:
     st.info("👋 Please fill in your birth details above and click 'Generate Horoscope Calculations'.")
 else:
-    # EXECUTING GUARANTEED API METHODS COMPATIBLE WITH VEDASTRO PYTHON EXPORTS
     try:
-        # FIXED: Using explicit .LagnaSignName and .PlanetSignName string methods to bypass wrapper mapping bugs
         calculated_lagna = str(va.Calculate.LagnaSignName(birth_time))
         calculated_janma_rashi = str(va.Calculate.PlanetSignName(va.PlanetName.Moon, birth_time))
         calculated_sun_rashi = str(va.Calculate.PlanetSignName(va.PlanetName.Sun, birth_time))
         calculated_naam_rashi = calculate_naam_rashi(st.session_state.user_name)
         
-        # Using native string mappings for planet positions
         saturn_long = str(va.Calculate.PlanetLongitude(va.PlanetName.Saturn, birth_time))
         rahu_long = str(va.Calculate.PlanetLongitude(va.PlanetName.Rahu, birth_time))
         ketu_long = str(va.Calculate.PlanetLongitude(va.PlanetName.Ketu, birth_time))
