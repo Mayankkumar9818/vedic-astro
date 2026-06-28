@@ -12,20 +12,19 @@ except Exception as e:
 
 # Page Layout Configuration
 st.set_page_config(page_title="My Personal Vedic Dashboard", layout="wide")
-st.title("🇮🇳 Personal Indian Vedic Astrology System")
-st.markdown("Your custom, all-in-one astrological dashboard with deep human-language interpretations.")
+st.title("🔮 Aapka Apna Panditji: Personal Vedic Astrology System")
+st.markdown("Easy language mein aapki kundli, career, aur marriage compatibility ki deep details.")
 
 # Navigation Tabs
 tab1, tab2, tab3, tab4 = st.tabs([
-    "🔮 Personal Kundli & D60", 
-    "💑 Relationship & Guna Matching", 
-    "💼 Life & Material Desires (Jobs/Property)",
-    "📅 Today's Indian Panchanga"
+    "🔮 Kundli & Soul Reading", 
+    "💑 Guna Matching (Shaadi/Love)", 
+    "💼 Career & Property Potentials",
+    "📅 Aaj Ka Panchanga & Transits"
 ])
 
 # Robust function to safely obtain a valid VedAstro GeoLocation object 
 def get_safe_geolocation(city_name):
-    # Standard fallback coordinates for Indian cities to guarantee the code never crashes on API lookups
     city_defaults = {
         "new delhi": (77.2090, 28.6139),
         "delhi": (77.2090, 28.6139),
@@ -41,7 +40,6 @@ def get_safe_geolocation(city_name):
         lon, lat = city_defaults[clean_name]
         return GeoLocation(city_name, lon, lat)
     
-    # Try using geopy for any other dynamic city input safely
     try:
         from geopy.geocoders import Nominatim
         geolocator = Nominatim(user_agent="vedastro_app_2026")
@@ -51,22 +49,19 @@ def get_safe_geolocation(city_name):
     except Exception:
         pass
         
-    # Ultimate fail-safe to keep the application bulletproof (Defaults to New Delhi coordinates)
     return GeoLocation("New Delhi (Fallback)", 77.2090, 28.6139)
 
-
-# Helper function to render explicit Hour/Minute drop-downs avoiding slider implementations
+# Time picker without slider UI
 def non_slider_time_picker(key_prefix):
-    st.markdown("**Select Birth Time (AM/PM Selector)**")
+    st.markdown("**Birth Time Select Karein (AM/PM Selector)**")
     c1, c2, c3 = st.columns(3)
     with c1:
-        hr = c1.selectbox("Hour", list(range(1, 13)), index=2, key=f"{key_prefix}_hr") # Default 2 (for 14:30 / 2:30 PM)
+        hr = c1.selectbox("Ghanta (Hour)", list(range(1, 13)), index=2, key=f"{key_prefix}_hr")
     with c2:
-        minute = c2.selectbox("Minute", [f"{i:02d}" for i in range(60)], index=30, key=f"{key_prefix}_min") # Default 30
+        minute = c2.selectbox("Minute", [f"{i:02d}" for i in range(60)], index=30, key=f"{key_prefix}_min")
     with c3:
-        period = c3.selectbox("AM/PM", ["AM", "PM"], index=1, key=f"{key_prefix}_period") # Default PM
+        period = c3.selectbox("AM/PM", ["AM", "PM"], index=1, key=f"{key_prefix}_period")
         
-    # Convert back to 24-hour time internally for VedAstro engine processing
     hour_24 = int(hr)
     if period == "PM" and hour_24 < 12:
         hour_24 += 12
@@ -75,7 +70,6 @@ def non_slider_time_picker(key_prefix):
         
     return datetime.time(hour_24, int(minute))
 
-# Explicit date constraints extending to the current calendar year 2026
 MIN_DATE = datetime.date(1900, 1, 1)
 MAX_DATE = datetime.date(2026, 12, 31)
 
@@ -83,30 +77,28 @@ MAX_DATE = datetime.date(2026, 12, 31)
 # TAB 1: KUNDLI & DEEP SOUL READING
 # ==========================================
 with tab1:
-    st.header("Personal Birth Chart Details")
-    st.markdown("Discover your core signs, ascendant profile, and divisional alignment translated into direct English.")
+    st.header("✨ Aapki Kundli Ke Main Grah-Nakshatra")
+    st.markdown("Aapki personality aur grahon ki original positions ka asaan prediction.")
     
-    user_name = st.text_input("Your Name", "Seeker")
+    user_name = st.text_input("Aapka Naam", "Seeker")
     
     col1, col2 = st.columns(2)
     with col1:
-        location_input = st.text_input("Birth City/Town (India)", "New Delhi")
+        location_input = st.text_input("Birth Place / City (India)", "New Delhi")
         time_input = non_slider_time_picker("tab1")
     with col2:
         date_input = st.date_input(
-            "Birth Date (Use Year Selector Dropdown)", 
+            "Birth Date (Dropdown se year change karein)", 
             value=datetime.date(1992, 10, 25),
             min_value=MIN_DATE,
             max_value=MAX_DATE
         )
         tz_input = st.text_input("Timezone Offset", "+05:30", disabled=True)
         
-    if st.button("Calculate My Chart", key="calc_chart"):
-        with st.spinner("Decoding your natal sky..."):
+    if st.button("Kundli Calculate Karein", key="calc_chart"):
+        with st.spinner("Panditji calculation kar rahe hain..."):
             try:
-                # Use robust GeoLocation factory function instead of broken payload extraction
                 loc = get_safe_geolocation(location_input)
-                
                 formatted_time = time_input.strftime("%H:%M")
                 formatted_date = date_input.strftime("%d/%m/%Y")
                 time_str = f"{formatted_time} {formatted_date} +05:30"
@@ -119,7 +111,7 @@ with tab1:
                 planet_json = json.loads(Tools.AnyToJSON("", all_planet_data)) if all_planet_data else {}
                 house_json = json.loads(Tools.AnyToJSON("", all_house_data)) if all_house_data else {}
                 
-                st.success(f"✅ Chart successfully generated for {user_name}!")
+                st.success(f"✅ Kundli tayaar hai, {user_name}!")
                 
                 calculated_house_sign = "Detected"
                 if isinstance(house_json, dict):
@@ -131,47 +123,47 @@ with tab1:
                 
                 c1, c2, c3 = st.columns(3)
                 with c1:
-                    st.metric(label="☀️ Sun Location Context", value=f"House {sun_house}")
+                    st.metric(label="☀️ Surya Dev Ki Position", value=f"House {sun_house}")
                 with c2:
-                    st.metric(label="🔮 Ascendant (Lagna) Sign", value=calculated_house_sign)
+                    st.metric(label="🔮 Aapka Lagna Sign (Ascendant)", value=calculated_house_sign)
                 with c3:
-                    st.metric(label="🌌 D60 Past Karma State", value="Active Alignment")
+                    st.metric(label="🌌 D60 Past Karma State", value="Active")
                 
-                st.subheader(f"🗣️ What This Placement Means for {user_name}:")
+                st.subheader(f"🗣️ Simple Language Mein Iska Matlab Kya Hai, {user_name}?")
                 st.markdown(f"""
-                * **Your Ascendant (Lagna) is {calculated_house_sign}:** This means your entire life's physical journey operates through the traits of {calculated_house_sign}.
-                * **Your Sun is located in House {sun_house}:** Your core vitality gravitates towards the themes governed by this specific house sector.
+                * **Aapka Lagna {calculated_house_sign} hai:** Iska seedha matlab ye hai ki aapka natural behavior, health, aur look isi rashi se control hota hai. Log aapko isi nature se pehchante hain.
+                * **Surya Dev House {sun_house} mein baithe hain:** Surya matlab aapki soul aur confidence. Ab chunki ye {sun_house} house mein hain, aapki poori life ka focus aur energy hamesha isi sector ke chakkar kaategi (jaise career, paisa ya relationships).
                 """)
                     
-                with st.expander("View Full Raw Data Structure"):
+                with st.expander("Raw Technical Data Dekhein"):
                     st.json(house_json)
                     
             except Exception as e:
-                st.error(f"Calculation tracking error: {e}. If the error persists, please verify the network availability of the VedAstro API engine.")
+                st.error(f"Calculation mein dikkat aayi: {e}.")
 
 # ==========================================
 # TAB 2: MARRIAGE & GUNA MATCHING
 # ==========================================
 with tab2:
-    st.header("Ashta Koota Love & Marriage Interpretation")
-    st.markdown("Calculate exactly how many **Gunas** (out of 36) match between your chart and another person's chart.")
+    st.header("💑 Kundli Milan (Ashta Koota Guna Match)")
+    st.markdown("Check karein ki dono ke kitne Guna milte hain (Total 36 mein se).")
     
     m_col, f_col = st.columns(2)
     with m_col:
-        st.subheader("Your Details")
-        m_name = st.text_input("Your Name", "Partner A")
-        m_loc = st.text_input("Your City", "New Delhi", key="m1")
+        st.subheader("Boy / Partner A Details")
+        m_name = st.text_input("Boy's Name", "Partner A")
+        m_loc = st.text_input("Boy's Birth City", "New Delhi", key="m1")
         m_time = non_slider_time_picker("tab2_m")
-        m_date = st.date_input("Your Date", value=datetime.date(1992, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="m3")
+        m_date = st.date_input("Boy's Birth Date", value=datetime.date(1992, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="m3")
     with f_col:
-        st.subheader("Other Person's Details")
-        f_name = st.text_input("Their Name", "Partner B")
-        f_loc = st.text_input("Their City", "New Delhi", key="f1")
+        st.subheader("Girl / Partner B Details")
+        f_name = st.text_input("Girl's Name", "Partner B")
+        f_loc = st.text_input("Girl's Birth City", "New Delhi", key="f1")
         f_time = non_slider_time_picker("tab2_f")
-        f_date = st.date_input("Their Date", value=datetime.date(1997, 6, 15), min_value=MIN_DATE, max_value=MAX_DATE, key="f3")
+        f_date = st.date_input("Girl's Birth Date", value=datetime.date(1997, 6, 15), min_value=MIN_DATE, max_value=MAX_DATE, key="f3")
         
-    if st.button("Calculate Guna Match Score"):
-        with st.spinner("Evaluating relationship matching scores..."):
+    if st.button("Guna Milan Score Nikalein"):
+        with st.spinner("Kundli match ho rahi hai..."):
             try:
                 b_geo = get_safe_geolocation(m_loc)
                 boy_time_str = f"{m_time.strftime('%H:%M')} {m_date.strftime('%d/%m/%Y')} +05:30"
@@ -188,49 +180,58 @@ with tab2:
                 gunas_matched = round((percentage_score / 100) * 36, 1)
                 gunas_not_matched = round(36 - gunas_matched, 1)
                 
-                st.subheader(f"📊 Traditional Guna Scorecard: {m_name} & {f_name}")
+                st.subheader(f"📊 Final Scorecard: {m_name} ❤️ {f_name}")
                 c1, c2, c3 = st.columns(3)
                 with c1:
-                    st.metric(label="✅ Gunas Matched", value=f"{gunas_matched} / 36")
+                    st.metric(label="✅ Kitne Guna Mile", value=f"{gunas_matched} / 36")
                 with c2:
-                    st.metric(label="❌ Gunas Not Matched", value=f"{gunas_not_matched} / 36")
+                    st.metric(label="❌ Jo Guna Nahi Mile", value=f"{gunas_not_matched} / 36")
                 with c3:
-                    st.metric(label="📈 Percentage Compatibility", value=f"{int(percentage_score)}%")
+                    st.metric(label="📈 Compatibility Score", value=f"{int(percentage_score)}%")
+                
+                st.subheader("🗣️ Panditji Ka Verdict (Hinglish Mein):")
+                if gunas_matched >= 25.0:
+                    st.balloons()
+                    st.success(f"🌟 **Shaandaar Match ({gunas_matched} Gunas):** Are boss ekdum kamaal match hai! Dono ki tuning, aapsi samajh, aur kismat ek doosre ke liye perfect bani hai. Go ahead!")
+                elif gunas_matched >= 18.0:
+                    st.info(f"⚖️ **Normal/Theek Match ({gunas_matched} Gunas):** Gaadi chal padegi! Shastron ke hisaab se minimum 18 milne chahiye, aur aapke usse upar hain. Thoda adjustments lagenge par shaadi badhiya rahegi.")
+                else:
+                    st.warning(f"⚠️ **Thoda Mushkil Hai ({gunas_matched} Gunas):** Guna score kaafi kam aaya hai boss. Iska matlab dono ke nature aur soch mein kaafi farak hoga. Shaadi chalane ke liye bohot patience aur compromises ki zaroorat padegi.")
                 
                 embeds = match_json.get("Embeddings", []) if isinstance(match_json, dict) else []
                 if embeds and len(embeds) >= 8:
-                    st.write("### 🔍 Category-by-Category Guna Breakdown:")
+                    st.write("### 🔍 Category Wise Breakdown:")
                     metrics_df = pd.DataFrame({
                         "Astrological Category": [
-                            "Varna (Work Profile & Ego Sync)", "Vashya (Mutual Attraction & Influence)", 
-                            "Tara (Destiny Progression & Health)", "Yoni (Physical Intimacy & Instincts)", 
-                            "Graha Maitram (Mental Friendship & Humor)", "Gana (Temperament & Social Behavior)", 
-                            "Bhakoot (Emotional Connection & Family)", "Nadi (Genetic Compatibility & Children)"
+                            "Varna (Ego & Work Sync)", "Vashya (Attraction & Control)", 
+                            "Tara (Health & Destiny)", "Yoni (Physical Compatibility)", 
+                            "Graha Maitram (Friendship & Mindset)", "Gana (Nature/Temperament)", 
+                            "Bhakoot (Family & Love Connection)", "Nadi (Genetic Health & Kids)"
                         ],
-                        "Max Points Possible": [1, 2, 3, 4, 5, 6, 7, 8],
-                        "Your Matched Points": [embeds[0], embeds[1], embeds[2], embeds[3], embeds[4], embeds[5], embeds[6], embeds[7]]
+                        "Max Score": [1, 2, 3, 4, 5, 6, 7, 8],
+                        "Aapka Score": [embeds[0], embeds[1], embeds[2], embeds[3], embeds[4], embeds[5], embeds[6], embeds[7]]
                     }).set_index("Astrological Category")
                     
-                    st.bar_chart(metrics_df["Your Matched Points"])
+                    st.bar_chart(metrics_df["Aapka Score"])
                     st.table(metrics_df)
                     
             except Exception as e:
-                st.error(f"Match report processing failed: {e}")
+                st.error(f"Error occurred: {e}")
 
 # ==========================================
 # TAB 3: LIFE & MATERIAL DESIRES
 # ==========================================
 with tab3:
-    st.header("💼 Career Prospects & 🏠 House Building Possibilities")
-    st.markdown("Analyze how the astrological blueprints of your chart affect your professional growth and real estate potential.")
+    st.header("💼 Career Job Yoga & 🏠 Apna Ghar / Property Potential")
+    st.markdown("Kundli ke hisaab se career ki tarakki aur land/assets ka roadmap.")
     
-    user_name_p = st.text_input("Name", "Seeker", key="prop_name")
-    loc_p = st.text_input("Confirm Your Birth City", "New Delhi", key="prop_loc")
+    user_name_p = st.text_input("Naam", "Seeker", key="prop_name")
+    loc_p = st.text_input("Birth Place Re-confirm Karein", "New Delhi", key="prop_loc")
     time_p = non_slider_time_picker("tab3_p")
-    date_p = st.date_input("Confirm Your Birth Date", value=datetime.date(1992, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="prop_date")
+    date_p = st.date_input("Birth Date Re-confirm Karein", value=datetime.date(1992, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="prop_date")
     
-    if st.button("Analyze Career & Property Potential"):
-        with st.spinner("Scanning material houses..."):
+    if st.button("Career aur Property Status Dekhein"):
+        with st.spinner("Material houses analyze ho rahe hain..."):
             try:
                 p_geo = get_safe_geolocation(loc_p)
                 p_time_str = f"{time_p.strftime('%H:%M')} {date_p.strftime('%d/%m/%Y')} +05:30"
@@ -245,25 +246,33 @@ with tab3:
                 arudha_4 = h4_data.get("ArudhaOfHouse", "House4") if isinstance(h4_data, dict) else "House4"
                 arudha_10 = h10_data.get("ArudhaOfHouse", "House10") if isinstance(h10_data, dict) else "House10"
                 
-                st.subheader(f"💼 1. Job, Professional Stability & Career Tracks for {user_name_p}")
-                st.markdown(f"Your external manifestation anchor point is processing through **{arudha_10}**.")
+                st.subheader(f"💼 Career Aur Professional Life ({user_name_p})")
+                st.markdown(f"""
+                Aapke career ka faisla Kundli ka **10th House (Karma Sthana)** karta hai. Aapke chart mein ye link ho raha hai **{arudha_10}** ke saath.
                 
-                st.subheader("🏠 2. House Construction, Land, & Property Possibilities")
-                st.markdown(f"Your chart displays an active property reflection point located in **{arudha_4}**.")
+                **Panditji Ki Advice:** Boss, iska matlab aapko aisi jagah kaam karna pasand hoga jahan clear targets aur responsibilities hon. Sahi dasha aane par career mein solid jump dikhega.
+                """)
+                
+                st.subheader("🏠 Property, Land aur Gaadi Ka Sukh")
+                st.markdown(f"""
+                Ghar banana ya zameen kharidna Kundli ka **4th House (Sukha Sthana)** batata hai. Aapka property point **{arudha_4}** par active hai.
+                
+                **Panditji Ki Advice:** Chart badhiya hai! Assets aur apna khud ka ghar banane ka support aapki kundli ke setup mein poora dikh raha hai.
+                """)
                 
             except Exception as e:
-                st.error(f"Could not calculate structural house blueprints: {e}")
+                st.error(f"House calculations update failed: {e}")
 
 # ==========================================
 # TAB 4: DAILY PANCHANGA
 # ==========================================
 with tab4:
-    st.header("Live Cosmic Weather (Today's Indian Panchanga)")
-    st.markdown("Check the daily cosmic energies active over your city right now.")
-    t_loc = st.text_input("Your Current Location (India Only)", "New Delhi", key="t_loc")
+    st.header("📅 Aaj Ka Grah Gochar (Live Cosmic Transit)")
+    st.markdown("Check karein ki aaj aasman mein grahon ki chaal aapke sheher par kaisi chal rahi hai.")
+    t_loc = st.text_input("Aapki Current Location", "New Delhi", key="t_loc")
     
-    if st.button("Get Today's Transit Insights"):
-        with st.spinner("Reading live transits..."):
+    if st.button("Aaj Ka Transit Formula Dekhein"):
+        with st.spinner("Live transits scan ho rahe hain..."):
             try:
                 today_geo = get_safe_geolocation(t_loc)
                 now_datetime = datetime.datetime.now()
@@ -273,13 +282,18 @@ with tab4:
                 tithi_data = Calculate.AllZodiacSignData(ZodiacName.Aries, today_time_obj)
                 panchanga_json = json.loads(Tools.AnyToJSON("", tithi_data)) if tithi_data else {}
                 
-                st.success(f"Loaded live transits for exact timestamp: {now_time}")
+                st.success(f"Live planets loaded for timestamp: {now_time}")
                 
                 focal_house = panchanga_json.get('HouseFromSignName', 'House 11') if isinstance(panchanga_json, dict) else 'House 11'
                 destiny_point = panchanga_json.get("DestinyPoint", "3") if isinstance(panchanga_json, dict) else '3'
                 
-                st.info(f"🌌 Active Planetary Focal House: {focal_house}")
-                st.metric(label="✨ Core Cosmic Destiny Vector Point", value=destiny_point)
+                st.info(f"🌌 Aaj Ka Active House Vector: {focal_house}")
+                st.metric(label="✨ Core Transit Point", value=destiny_point)
                 
+                st.subheader("🗣️ Aaj Ka Panditji Prediction:")
+                st.write("""
+                Aaj ke din grahon ka ishaara hai ki faltu ke pange ya bina soche samjhe impulsively koi bada paisa invest mat karna, varna nuksan ho sakta hai. 
+                Puraane pending tasks ko clear karne ke liye din badhiya hai. Shaanti se plans banao!
+                """)
             except Exception as e:
-                st.error(f"Could not load transit analytics: {e}")
+                st.error(f"Transit scan issue: {e}")
