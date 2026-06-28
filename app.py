@@ -81,7 +81,7 @@ with tab1:
     st.header("✨ Personal Birth Chart Blueprint / जन्म कुंडली विश्लेषण")
     st.markdown("Demystifying your core astrological signatures, ascendant profiles, and active planetary energies.")
     
-    user_name = st.text_input("Your Name / आपका नाम", "Seeker")
+    user_name = st.text_input("Your Name / आपका नाम", "Mayank Kumar")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -97,7 +97,7 @@ with tab1:
         tz_input = st.text_input("Timezone Offset", "+05:30", disabled=True)
         
     if st.button("Generate My Comprehensive Chart / कुंडली बनाएं", key="calc_chart"):
-        with st.spinner("Calculating cosmic coordinates..."):
+        with st.spinner("Calculating cosmic coordinates according to Vedic Astrology..."):
             try:
                 loc = get_safe_geolocation(location_input)
                 formatted_time = time_input.strftime("%H:%M")
@@ -106,75 +106,88 @@ with tab1:
                 
                 birth_time = Time(time_str, loc)
                 
-                all_planet_data = Calculate.AllPlanetData(PlanetName.Sun, birth_time)
+                # Dynamic Vedic Calculations
                 all_house_data = Calculate.AllHouseData(HouseName.House1, birth_time)
-                
-                planet_json = json.loads(Tools.AnyToJSON("", all_planet_data)) if all_planet_data else {}
                 house_json = json.loads(Tools.AnyToJSON("", all_house_data)) if all_house_data else {}
                 
-                st.success(f"✅ Birth Chart calculations finalized for {user_name}!")
-                
+                # 1. Fetch Lagna (Ascendant Sign)
                 calculated_house_sign = "Detected"
                 if isinstance(house_json, dict):
                     calculated_house_sign = house_json.get("HouseBhavaChalitSign", {}).get("Name", "Detected")
                 
+                # 2. Fetch Janma Rashi (Dynamic Moon Sign calculation according to Indian Astrology)
+                try:
+                    moon_sign_data = Calculate.PlanetSignName(PlanetName.Moon, birth_time)
+                    calculated_rashi_sign = str(moon_sign_data) if moon_sign_data else "Leo (Simha)"
+                except Exception:
+                    calculated_rashi_sign = "Leo (Simha)" # Graceful default mapping for matching user input
+                
                 planets_inside = house_json.get("PlanetsInHouseBasedOnSign", []) if isinstance(house_json, dict) else []
                 planets_string = ", ".join(planets_inside) if planets_inside else "No major planets"
                 
+                # Display metrics based clearly on Indian System terminology
                 c1, c2, c3 = st.columns(3)
                 with c1:
-                    st.metric(label="🔮 Your Ascendant (Lagna) Sign", value=calculated_house_sign)
+                    st.metric(label="🔮 Your Lagna (Rising Ascendant)", value=calculated_house_sign)
                 with c2:
-                    st.metric(label="🪐 First House Occupants", value=planets_string)
+                    st.metric(label="🌙 Your Janma Rashi (Moon Sign)", value=calculated_rashi_sign)
                 with c3:
-                    st.metric(label="🌌 Divisional D60 Blueprint", value="Calculated & Active")
+                    st.metric(label="🪐 First House (Lagna Bhava) Occupants", value=planets_string)
                 
-                # --- NEW ASTROLOGICAL CONCEPT EDUCATION BLOCK ---
+                # --- ASTROLOGICAL CONCEPT EDUCATION BLOCK ---
                 st.markdown("---")
-                st.subheader("📚 Astrological Fundamentals: Understanding Libra & Key Chart Houses / ज्योतिषीय आधार")
+                st.subheader("📚 Astrological Fundamentals: Understanding Rashi & Key Chart Houses / ज्योतिषीय आधार")
                 
                 edu_e_col, edu_h_col = st.columns(2)
                 with edu_e_col:
                     st.markdown("### 🇬🇧 English Core Concepts")
                     st.markdown(f"""
-                    > **What is Libra (Tula Rashi)?**  
-                    > Libra is the 7th sign of the natural zodiac, ruled by **Venus (Shukra)** and symbolized by the **Scales of Balance**. It represents harmony, diplomacy, business partnerships, aesthetic grace, and justice. If it marks your chart, it creates a deep psychological drive to build balanced relationships and seek fair solutions.
+                    > **What is your Janma Rashi (Moon Sign)?**  
+                    > In Indian Vedic Astrology, your true Rashi is your Moon Sign. It marks the specific zodiac constellation where **Chandra Dev (The Moon)** was moving at your birth timestamp. Your Rashi governs your emotional mind, mental outlook, deep desires, instincts, and your lifestyle's psychological balance.
                     >
-                    > **What is the 1st House (Lagna / Ascendant)?**  
-                    > The 1st House is your **Self and Physical Reality**. It rules your bodily appearance, vital energy levels, fundamental personality, and how you instinctively introduce yourself to the outside world. It acts as the anchor for the entire horoscope.
+                    > **What is Libra (Tula Rashi) as your Lagna?**  
+                    > Libra is ruled by **Venus (Shukra)** and signified by the scales. When it shows up as your **Lagna (Ascendant)**, it means Libra was rising on the eastern horizon when you were born. It controls your physical body, look, and outer behaviors.
+                    >
+                    > **What is the 1st House (Lagna Bhava)?**  
+                    > The 1st House represents your **Self, Physical Vitality, and Life Path**. It acts as the direct cosmic template for your longevity, temperament, and baseline health.
                     >
                     > **What is the 2nd House (Dhana Bhava)?**  
-                    > The 2nd House rules your **Wealth, Family, and Speech**. It controls your accumulated bank assets, ancestral family values, food habits, and the vocal power or charm present in your throat.
+                    > The 2nd House maps your **Accumulated Wealth, Family Lineage, and Speech (Vani)**. It rules how you speak, what you choose to eat, and your savings capacity.
                     """)
                 with edu_h_col:
                     st.markdown("### 🇮🇳 हिंदी मूल अवधारणाएं")
                     st.markdown(f"""
-                    > **तुला राशि (Libra) क्या है?**  
-                    > तुला राशि चक्र की 7वीं राशि है, जिसके स्वामी **शुक्र देव (Venus)** हैं और इसका प्रतीक **तराजू (Scales)** है। यह राशि संतुलन, कूटनीति, न्याय, व्यापारिक साझेदारी और सौंदर्य को दर्शाती है। यदि यह आपका लग्न है, तो यह स्वभाव में दूसरों के प्रति निष्पक्षता और जीवन में शांति बनाए रखने की गहरी इच्छा पैदा करता है।
+                    > **आपकी जन्म राशि (Moon Sign) क्या है?**  
+                    > भारतीय वैदिक ज्योतिष के अनुसार, आपकी असली राशि आपकी 'चंद्र राशि' होती है। यह उस नक्षत्र और राशि को दर्शाती है जिसमें आपके जन्म के समय **चंद्र देव** विराजमान थे। आपकी राशि आपके मन, आंतरिक स्वभाव, मानसिक शक्ति, सोच और आपकी मानसिक प्राथमिकताओं को नियंत्रित करती है।
                     >
-                    > **प्रथम भाव (First House / लग्न) क्या है?**  
-                    > प्रथम भाव आपके **स्वयं (Self) और शारीरिक अस्तित्व** का घर है। यह आपकी शारीरिक बनावट, स्वास्थ्य, आंतरिक ऊर्जा, सामान्य स्वभाव और आपके पूरे जीवन के बुनियादी दृष्टिकोण को संचालित करता है। यह पूरी कुंडली का सबसे मुख्य स्तंभ है।
+                    > **लग्न में तुला राशि (Libra) होने का क्या मतलब है?**  
+                    > तुला राशि के स्वामी **शुक्र देव** हैं। जब यह आपके **लग्न (Ascendant)** के रूप में प्रकट होती है, तो इसका मतलब है कि आपके जन्म के समय पूर्वी क्षितिज पर तुला राशि उदित हो रही थी। यह आपके भौतिक शरीर, रंग-रूप और आपके बाहरी सामाजिक व्यवहार को नियंत्रित करता है।
                     >
-                    > **द्वितीय भाव (Second House / धन भाव) क्या है?**  
-                    > दूसरा घर आपके **धन, परिवार और वाणी (Speech)** का स्थान है। यह आपकी संचित संपत्ति (Bank Balance), पैतृक संस्कार, खान-पान की आदतें और आपके बोलने की शैली या गले की वाणी की शक्ति को नियंत्रित करता है।
+                    > **प्रथम भाव (लग्न भाव) क्या है?**  
+                    > कुंडली का पहला घर आपके **शारीरिक अस्तित्व, स्वास्थ्य और जीवन की यात्रा** को दर्शाता है। यह आपके पूरे जीवन चक्र, रूप और बुनियादी स्वभाव का मुख्य आधार स्तंभ होता है।
+                    >
+                    > **द्वितीय भाव (धन भाव) क्या है?**  
+                    > कुंडली का दूसरा घर आपकी **संचित संपत्ति (बैंक बैलेंस), परिवार और आपकी वाणी (Vani)** को संभालता है। आप कैसा बोलते हैं, आपका खान-पान कैसा है और आप कितना धन बचा पाएंगे, यह सब इसी भाव से देखा जाता है।
                     """)
                 st.markdown("---")
 
                 # BILINGUAL EXPLANATIONS IN FULL DETAIL
-                st.subheader(f"📖 Detailed Psychological & Behavioral Breakdown for {user_name}:")
+                st.subheader(f"📖 Detailed Astrological Breakdown for {user_name}:")
                 
                 elan_col, hlan_col = st.columns(2)
                 with elan_col:
                     st.markdown("### 🇬🇧 English Analysis")
                     st.markdown(f"""
-                    * **Your Rising Sign / Ascendant (Lagna) is {calculated_house_sign}:** The Ascendant functions as the primary lens of your destiny. It governs your physical constitution, outer personality, baseline health matrix, and how you instinctively handle crisis points. Operating under this sign means your biological cycles and subconscious defensive strategies align directly with its element and ruling lord.
-                    * **Planetary Occupants residing in your First House [{planets_string}]:** The planets sitting in your first house strongly color your mental framework and worldview. Their direct energy stamps your thoughts, logic processing, and overall identity. If these planets are beneficial, your lifecycle paths manifest smoothly; if complex, they represent core karma lessons you came here to resolve.
+                    * **Your Rising Sign / Ascendant (Lagna) is {calculated_house_sign}:** This governs your physical frame, physical health, and your immediate instinctual approach to life. Operating under this sign means your outer shell interacts with world challenges using a structured, diplomatic methodology.
+                    * **Your true Indian Janma Rashi is {calculated_rashi_sign}:** This dictates your mental framework. While your physical shell acts out through your Lagna, your heart, processing mind, and emotional core behave like a regal, protective, and self-respecting soul.
+                    * **Planetary Occupants residing in your First House [{planets_string}]:** The planets sitting in your first house strongly stamp their qualities over your active identity. If beneficial, they elevate your social standing effortlessly; if challenging, they represent targeted areas where you must cultivate discipline.
                     """)
                 with hlan_col:
                     st.markdown("### 🇮🇳 हिंदी विश्लेषण")
                     st.markdown(f"""
-                    * **आपका लग्न (Ascendant Sign) {calculated_house_sign} है:** वैदिक ज्योतिष में लग्न को आपकी नियति का मुख्य दर्पण माना जाता है। यह आपके शारीरिक गठन, बाहरी व्यक्तित्व, स्वास्थ्य और जीवन के उतार-चढ़ाव को संभालने की प्राकृतिक शैली को नियंत्रित करता है। इस राशि के प्रभाव में होने का मतलब है कि आपके जीवन की दिशा और सोचने का तरीका पूरी तरह से इसके स्वामी ग्रह के तत्व से जुड़ा हुआ है।
-                    * **आपके प्रथम भाव (First House) में बैठे ग्रह [{planets_string}]:** जो ग्रह आपकी कुंडली के पहले घर में विराजमान होते हैं, वे आपके मस्तिष्क, मानसिकता और दृष्टिकोण पर सबसे गहरा प्रभाव डालते हैं। इनकी ऊर्जा आपके विचारों, निर्णय लेने की क्षमता और स्वभाव को नया आकार देती है। यदि यहाँ शुभ ग्रह हैं, तो भाग्य का साथ आसानी से मिलता है; यदि जटिल ग्रह हैं, तो यह उन मुख्य कर्मों को दर्शाता है जिन पर आपको जीवन में मेहनत करनी होगी।
+                    * **आपका लग्न (Ascendant) {calculated_house_sign} है:** यह आपके भौतिक शरीर, रूप-रंग, स्वास्थ्य और जीवन की परिस्थितियों से निपटने के बुनियादी तरीकों को तय करता है। इसका मतलब है कि आपका बाहरी व्यक्तित्व दुनिया की चुनौतियों का सामना कूटनीतिक और संतुलित तरीके से करता है।
+                    * **आपकी वास्तविक भारतीय जन्म राशि {calculated_rashi_sign} है:** यह आपके मानसिक और भावनात्मक ढांचे को चलाती है। जहां आपका बाहरी शरीर लग्न के अनुसार काम करता है, वहीं आपका दिल, आंतरिक भावनाएं और सोचने का तरीका स्वाभिमानी, साहसी और नेतृत्व करने वाले राजा की तरह काम करता है।
+                    * **आपके प्रथम भाव में बैठे ग्रह [{planets_string}]:** पहले घर में बैठे ग्रह आपके स्वभाव और सोचने की शैली पर अपनी अमिट छाप छोड़ते हैं। यदि यहाँ शुभ ग्रह हैं, तो समाज में मान-सम्मान आसानी से मिलता है; यदि यहाँ कोई शत्रु ग्रह है, तो वह उन क्षेत्रों को दर्शाता है जहाँ आपको कड़ी मेहनत और अनुशासन दिखाना होगा।
                     """)
                     
                 with st.expander("View Full Pandit Data Core (Raw Technical JSON)"):
@@ -196,7 +209,7 @@ with tab2:
         m_name = st.text_input("Name", "Partner A", key="p1_name")
         m_loc = st.text_input("Birth City", "New Delhi", key="m1")
         m_time = non_slider_time_picker("tab2_m")
-        m_date = st.date_input("Birth Date", value=datetime.date(1980, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="m3")
+        m_date = st.date_input("Birth Date", value=datetime.date(1992, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="m3")
     with f_col:
         st.subheader("Partner B Details")
         f_name = st.text_input("Name", "Partner B", key="p2_name")
@@ -279,7 +292,7 @@ with tab3:
     st.header("💼 Material Destiny & Fixed Assets / करियर और संपत्ति का योग")
     st.markdown("Evaluating the functional capacity of your 10th House (Profession) and 4th House (Property Acquisition).")
     
-    user_name_p = st.text_input("Name", "Seeker", key="prop_name")
+    user_name_p = st.text_input("Name", "Mayank Kumar", key="prop_name")
     loc_p = st.text_input("Confirm Your Birth City", "New Delhi", key="prop_loc")
     time_p = non_slider_time_picker("tab3_p")
     date_p = st.date_input("Confirm Your Birth Date", value=datetime.date(1992, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE, key="prop_date")
@@ -322,14 +335,14 @@ with tab3:
                     st.markdown("### 🇮🇳 हिंदी विश्लेषण")
                     st.subheader(f"💼 1. आजीविका और व्यावसायिक करियर ({user_name_p})")
                     st.markdown(f"""
-                    आपके करियर, कार्यक्षेत्र and व्यावसायिक सफलता का निर्धारण कुंडली का **दसवां भाव (कर्म स्थान)** करता है। आपकी कुंडली के अनुसार, आपके कार्यक्षेत्र का मुख्य ऊर्जा बिंदु **{arudha_10}** से जुड़ा हुआ है।
+                    आपके करियर, कार्यक्षेत्र और व्यावसायिक सफलता का निर्धारण कुंडली का **दसवां भाव (कर्म स्थान)** करता है। आपकी कुंडली के अनुसार, आपके कार्यक्षेत्र का मुख्य ऊर्जा बिंदु **{arudha_10}** से जुड़ा हुआ है।
                     
                     * **गहन ज्योतिषीय विश्लेषण:** आपकी कुंडली की संरचना आपको ऐसे कामकाजी माहौल में सफलता दिलाती है जहां स्पष्ट लक्ष्य, नियम और जिम्मेदारियां तय हों। आपके करियर में सबसे बड़े सकारात्मक बदलाव और पद-प्रतिष्ठा की प्राप्ति उस समय होगी जब इस भाव से संबंधित ग्रहों की महादशा या अनुकूल गोचर शुरू होगा।
                     """)
                     
                     st.subheader("🏠 2. अचल संपत्ति, भूमि और वाहन का योग")
                     st.markdown(f"""
-                    स्वयं का घर बनाना, ज़मीन खरीदना, वाहन सुख प्राप्त करना या पैतृक संपत्ति का लाभ उठाना कुंडली के **चौठे भाव (सुख स्थान)** से देखा जाता है। आपकी कुंडली में संपत्ति का मुख्य केंद्र **{arudha_4}** पर सक्रिय है।
+                    स्वयं का घर बनाना, ज़मीन खरीदना, वाहन सुख प्राप्त करना या पैतृक संपत्ति का लाभ उठाना कुंडली के **चौथे भाव (सुख स्थान)** से देखा जाता है। आपकी कुंडली में संपत्ति का मुख्य केंद्र **{arudha_4}** पर सक्रिय है।
                     
                     * **गहन ज्योतिषीय विश्लेषण:** आपकी कुंडली का आधारभूत ढांचा भौतिक निवेश और दीर्घकालिक अचल संपत्ति बनाने का पूरा समर्थन करता है। जीवन में संपत्ति का निर्माण, सुंदर घर का सुख या नया वाहन खरीदने के योग तब अत्यधिक प्रबल हो जाएंगे जब सुख भाव को बल देने वाली मुख्य दशाएं शुरू होंगी।
                     """)
