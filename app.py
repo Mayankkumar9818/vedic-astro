@@ -4,7 +4,7 @@ import json
 import datetime
 from vedastro import *
 
-# Initialize VedAstro API Connection
+# Initialize VedAstro API Connection safely
 try:
     Calculate.SetAPIKey('FreeAPIUser')
 except Exception as e:
@@ -18,6 +18,14 @@ st.markdown("An advanced, dynamic astrological companion translating complex nat
 # Global Date Formats
 MIN_DATE = datetime.date(1900, 1, 1)
 MAX_DATE = datetime.date(2026, 12, 31)
+
+# Initialize Streamlit Session State Memory Keys to prevent tab-switching bugs
+if 'user_name' not in st.session_state: st.session_state.user_name = "Mayank Kumar"
+if 'location_input' not in st.session_state: st.session_state.location_input = "New Delhi"
+if 'date_input' not in st.session_state: st.session_state.date_input = datetime.date(1992, 10, 25)
+if 'sb_hr' not in st.session_state: st.session_state.sb_hr = 2
+if 'sb_min' not in st.session_state: st.session_state.sb_min = "30"
+if 'sb_period' not in st.session_state: st.session_state.sb_period = "PM"
 
 # Robust helper function to safely obtain a valid VedAstro GeoLocation object 
 def get_safe_geolocation(city_name):
@@ -65,33 +73,52 @@ def calculate_naam_rashi(name):
 
 
 # ==========================================================
-# CENTRALIZED INPUTS (Keeps elements visible across tabs!)
+# MAIN PAGE INPUT MATRIX (Unified at the Top)
 # ==========================================================
-st.sidebar.header("🗺️ Master Birth Parameters / मुख्य जन्म विवरण")
-user_name = st.sidebar.text_input("Your Name / आपका नाम", "Mayank Kumar")
-location_input = st.sidebar.text_input("Birth City / जन्म स्थान", "New Delhi")
-date_input = st.sidebar.date_input("Birth Date / जन्म तिथि", value=datetime.date(1992, 10, 25), min_value=MIN_DATE, max_value=MAX_DATE)
+st.markdown("### 🗺️ Enter Master Birth Parameters / मुख्य जन्म विवरण")
+with st.container():
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        u_name = st.text_input("Your Name / आपका नाम", value=st.session_state.user_name, key="input_name")
+        st.session_state.user_name = u_name
+    with col2:
+        l_input = st.text_input("Birth City / जन्म स्थान", value=st.session_state.location_input, key="input_city")
+        st.session_state.location_input = l_input
+    with col3:
+        d_input = st.date_input("Birth Date / जन्म तिथि", value=st.session_state.date_input, min_value=MIN_DATE, max_value=MAX_DATE, key="input_date")
+        st.session_state.date_input = d_input
 
-# Form-safe Time Selection Matrix inside Sidebar
-st.sidebar.markdown("---")
-st.sidebar.markdown("**Birth Time Selector / जन्म का समय**")
-sb_c1, sb_c2, sb_c3 = st.sidebar.columns(3)
-sb_hr = sb_c1.selectbox("Hr", list(range(1, 13)), index=2, key="sb_hr")
-sb_min = sb_c2.selectbox("Min", [f"{i:02d}" for i in range(60)], index=30, key="sb_min")
-sb_period = sb_c3.selectbox("AM/PM", ["AM", "PM"], index=1, key="sb_period")
+    # Clean time selector matrix layout below the primary inputs
+    st.markdown("**Birth Time Selector / जन्म का समय**")
+    t_col1, t_col2, t_col3 = st.columns(3)
+    with t_col1:
+        hr_selection = t_col1.selectbox("Hr", list(range(1, 13)), index=st.session_state.sb_hr - 1, key="input_hr")
+        st.session_state.sb_hr = hr_selection
+    with t_col2:
+        minutes_list = [f"{i:02d}" for i in range(60)]
+        default_min_idx = minutes_list.index(st.session_state.sb_min) if st.session_state.sb_min in minutes_list else 30
+        min_selection = t_col2.selectbox("Min", minutes_list, index=default_min_idx, key="input_min")
+        st.session_state.sb_min = min_selection
+    with t_col3:
+        period_idx = 0 if st.session_state.sb_period == "AM" else 1
+        period_selection = t_col3.selectbox("AM/PM", ["AM", "PM"], index=period_idx, key="input_period")
+        st.session_state.sb_period = period_selection
 
-sb_hour_24 = int(sb_hr)
-if sb_period == "PM" and sb_hour_24 < 12: sb_hour_24 += 12
-elif sb_period == "AM" and sb_hour_24 == 12: sb_hour_24 = 0
-master_time = datetime.time(sb_hour_24, int(sb_min))
+# Process hour transformation into 24-hour astronomical standard
+hour_24 = int(st.session_state.sb_hr)
+if st.session_state.sb_period == "PM" and hour_24 < 12: hour_24 += 12
+elif st.session_state.sb_period == "AM" and hour_24 == 12: hour_24 = 0
+master_time = datetime.time(hour_24, int(st.session_state.sb_min))
 
-# Pre-calculate calculation vectors so tabs can access variables safely
+# Generate the background astronomical calculation vectors 
 try:
-    master_loc = get_safe_geolocation(location_input)
-    master_time_str = f"{master_time.strftime('%H:%M')} {date_input.strftime('%d/%m/%Y')} +05:30"
+    master_loc = get_safe_geolocation(st.session_state.location_input)
+    master_time_str = f"{master_time.strftime('%H:%M')} {st.session_state.date_input.strftime('%d/%m/%Y')} +05:30"
     birth_time = Time(master_time_str, master_loc)
 except Exception:
     birth_time = None
+
+st.markdown("---")
 
 # Unified Dashboard Navigation Tabs
 tab1, tab2, tab3, tab4 = st.tabs([
@@ -112,7 +139,7 @@ with tab1:
             all_house_data = Calculate.AllHouseData(HouseName.House1, birth_time)
             house_json = json.loads(Tools.AnyToJSON("", all_house_data)) if all_house_data else {}
             calculated_house_sign = house_json.get("HouseBhavaChalitSign", {}).get("Name", "Libra (Tula)") if isinstance(house_json, dict) else "Libra (Tula)"
-            calculated_naam_rashi = calculate_naam_rashi(user_name)
+            calculated_naam_rashi = calculate_naam_rashi(st.session_state.user_name)
             
             c1, c2, c3 = st.columns(3)
             with c1: st.metric(label="🔮 Your Lagna (Rising Ascendant)", value=calculated_house_sign)
@@ -123,13 +150,9 @@ with tab1:
             st.subheader("📚 Astrological Fundamentals / ज्योतिषीय आधार")
             e_col, h_col = st.columns(2)
             with e_col:
-                st.markdown(f"""
-                > **Naam Rashi vs Janma Rashi:** For names starting with the **M** sound (like Mayank), your Naam Rashi defaults to **Simha (Leo)**, ruled by the Sun. It reflects your external social identity. Janma Rashi reflects the psychological mind where the Moon resided.
-                """)
+                st.markdown(f"> **Naam Rashi vs Janma Rashi:** For names starting with characters like '{st.session_state.user_name[:1]}', your Naam Rashi defaults to **{calculated_naam_rashi}**. It reflects your external social identity, whereas Janma Rashi reflects the deep subconscious mind.")
             with h_col:
-                st.markdown(f"""
-                > **नाम राशि बनाम जन्म राशि:** **'म'** अक्षर से शुरू होने वाले नामों की नाम राशि **सिंह (Leo)** होती है। यह आपके सामाजिक जीवन को दर्शाती है। जन्म राशि आंतरिक विचार प्रणाली को चलाती है।
-                """)
+                st.markdown(f"> **नाम राशि बनाम जन्म राशि:** आपके नाम के पहले अक्षर के आधार पर आपकी नाम राशि **{calculated_naam_rashi}** है। यह बाहरी व्यक्तित्व को दर्शाती है, जबकि जन्म राशि आंतरिक मन को चलाती है।")
         except Exception as e:
             st.error(f"Engine parsing error: {e}")
 
@@ -138,7 +161,7 @@ with tab1:
 # ==========================================
 with tab2:
     st.header("💑 Marriage Alignment & Personalized Timing / विवाह योग एवं सटीक समय")
-    st.markdown("Calculates **customized age windows** by evaluating planetary blockages or benefits in your 7th House.")
+    st.markdown("Calculates **customized age windows** by evaluating planetary profiles in your 7th House.")
     
     if birth_time:
         try:
