@@ -145,8 +145,8 @@ else:
         h1_json = json.loads(Tools.AnyToJSON("", h1_raw)) if h1_raw else {}
         calculated_lagna = h1_json.get("HouseBhavaChalitSign", {}).get("Name", "Libra (Tula)")
         
-        # FIXED: Pulled Moon's Sign data from Planet Sign library logic
-        moon_sign_data = Calculate.PlanetSignName(PlanetName.Moon, birth_time)
+        # FIXED: Core signature updated to use standard Calculate.PlanetSign method
+        moon_sign_data = Calculate.PlanetSign(PlanetName.Moon, birth_time)
         calculated_janma_rashi = str(moon_sign_data).strip() if moon_sign_data else "Tula (Libra)"
         calculated_naam_rashi = calculate_naam_rashi(st.session_state.user_name)
         
@@ -273,20 +273,39 @@ else:
         st.table(transit_df)
 
     # ==========================================
-    # UNFILTERED FINAL VERDICT SUMMARY
+    # UNFILTERED FINAL VERDICT SUMMARY (BILINGUAL)
     # ==========================================
-    st.markdown("### 🎯 Unfiltered Karmic Final Verdict")
-    with st.expander("See Raw Astrological Summary (Good or Bad)", expanded=True):
-        st.markdown("#### **The Bottom Line**")
+    st.markdown("---")
+    st.markdown("## 🎯 Unfiltered Karmic Final Verdict / अंतिम परिणाम (सत्य समीक्षा)")
+    
+    col_en, col_hi = st.columns(2)
+    
+    with col_en:
+        st.subheader("🇬🇧 English Analysis")
         if has_malefic:
             st.error("""
-            ⚠️ **Critical Challenge Points:** Your chart contains lessons regarding structural delay (Saturn/Rahu presence). You will experience hurdles or resistance early in life regarding relationships or quick asset accumulation. Attempts to rush these milestones will result in setbacks. 
+            ⚠️ **Critical Challenge Points:** Your chart contains definite lessons regarding structural delay due to Saturn, Rahu, or Mars influencing your core houses. You will experience roadblocks or friction early in life regarding marriage alignment or rapid asset accumulation. Attempting to force these milestones prematurely before age 28-30 will likely trigger relational or financial setbacks.
             
-            🚀 **The Silver Lining:** Your long-term stability after Age 30 is significantly higher and structurally more secure than most. True success comes through patience and slow compounding.
+            🚀 **The Final Result:** Regardless of early struggles, your long-term foundational graph stabilizes beautifully after Age 30. True success manifests through steady compounding, strict discipline, and patience. It is challenging upfront but highly resilient later.
             """)
         else:
             st.success("""
-            ✅ **Core Strength Points:** Your chart points toward clean, unblocked energy paths for foundational milestones. Career advancement and social identity development experience steady, fluid progression without abrupt catastrophic downfalls.
+            ✅ **Core Strength Points:** Your chart points toward clean, unblocked energy paths for foundational milestones. Career advancement, social identity development, and partnership alignments experience steady, fluid progression without abrupt catastrophic downfalls.
             
-            ⚠️ **The Warning:** Do not mistake fluid progress for an excuse to coast. Laziness can squander favorable planet positions. Maintain active discipline.
+            ⚠️ **The Warning:** Do not mistake fluid progress for an excuse to coast. Lack of focus or overconfidence can squander favorable planetary positions. Maintain active daily discipline.
+            """)
+            
+    with col_hi:
+        st.subheader("🇮🇳 हिंदी समीक्षा")
+        if has_malefic:
+            st.error("""
+            ⚠️ **कठिन चुनौती बिंदु (नकारात्मक पक्ष):** आपकी कुंडली में शनि, राहु या मंगल के प्रभाव के कारण शुरुआती जीवन में रुकावटें साफ दिख रही हैं। विवाह या संपत्ति निर्माण में आपको शुरुआती दौर में संघर्ष या देरी का सामना करना पड़ेगा। यदि आप 28-30 वर्ष की आयु से पहले इन कार्यों में जल्दबाजी करेंगे, तो नुकसान या मानसिक तनाव हो सकता है।
+            
+            🚀 **अंतिम परिणाम (सकारात्मक पक्ष):** शुरुआती रुकावटों के बावजूद, 30 वर्ष की आयु के बाद आपका जीवन बहुत मजबूत और स्थिर हो जाएगा। आपकी असली सफलता धैर्य और निरंतर प्रयास से आएगी। शुरुआत कठिन है, लेकिन भविष्य बेहद सुरक्षित और अटूट है।
+            """)
+        else:
+            st.success("""
+            ✅ **मुख्य सकारात्मक बिंदु:** आपकी कुंडली में बुनियादी मील के पत्थरों (करियर, विवाह और धन) के लिए मार्ग साफ और शुभ ग्रहों से संरेखित है। आपका करियर और सामाजिक जीवन बिना किसी बड़ी उथल-पुथल के सुचारू रूप से आगे बढ़ेगा।
+            
+            ⚠️ **कड़ी चेतावनी:** इस सुगम प्रगति को लापरवाही का कारण न बनने दें। अत्यधिक आत्मविश्वास या आलस्य अच्छे ग्रहों के प्रभाव को भी कमजोर कर सकता है। अपनी अनुशासन को हमेशा बनाए रखें।
             """)
